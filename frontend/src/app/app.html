@@ -1,0 +1,13 @@
+<div class="app-shell">
+  <header class="app-header">
+    <span class="app-title">{{ title }}</span>
+    <nav class="app-nav">
+      <a routerLink="/rules" routerLinkActive="active">Rules</a>
+      <a routerLink="/ask-ai" routerLinkActive="active">Ask AI</a>
+      <a routerLink="/audit" routerLinkActive="active">Audit</a>
+    </nav>
+  </header>
+  <main class="app-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

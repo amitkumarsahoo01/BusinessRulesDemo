@@ -1,0 +1,40 @@
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: #1f2937;
+  color: #fff;
+}
+
+.app-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.app-nav {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.app-nav a {
+  color: #d1d5db;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.app-nav a.active,
+.app-nav a:hover {
+  color: #fff;
+}
+
+.app-content {
+  flex: 1;
+  padding: 2rem;
+}
