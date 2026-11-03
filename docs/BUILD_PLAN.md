@@ -48,11 +48,13 @@ Demo users (password `demo` for all, shown on login page):
   - Verified: `DecisionServiceIntegrationTest` (Testcontainers Postgres) — evaluate returns outputs + executionId, trace shows 1-indexed matched rows, GET /api/executions/{id} round-trips, simulate writes nothing, unknown model returns 404 problem+json, and a directly-inserted version + `pg_notify('model_published', ...)` hot-swaps into the registry within 15s with no restart. `DmnSeedFixturesTest` validates all 4 seed DMN files compile/evaluate correctly (incl. the 1.0.0→1.1.0 threshold-tightening behavior change). Also exercised live via `docker compose up --build`: evaluate through nginx returns correct outputs/trace. Scoping notes (insurance-premium + pgvector docs deferred to M5, auth is schema-only, simulate is published-version-only for now) are in docs/DECISIONS.md.
 
 ### M3 — Rule authoring lifecycle
-- [ ] Draft CRUD from guided-table JSON ↔ DMN XML (round-trip tested).
-- [ ] Validate (DMN validator: schema, FEEL compile, overlaps/gaps where available), run saved test cases.
-- [ ] Approve (must be different user than author), publish (immutable version, SHA-256), rollback.
-- [ ] Version diff endpoint; rule_change_audit on every action.
+- [x] Draft CRUD from guided-table JSON ↔ DMN XML (round-trip tested).
+- [x] Validate (DMN validator: schema, FEEL compile, overlaps/gaps where available), run saved test cases.
+- [x] Approve (must be different user than author), publish (immutable version, SHA-256), rollback.
+- [x] Version diff endpoint; rule_change_audit on every action.
 - Accept: analyst edits a row, approver approves, publish → next evaluation uses new version without restart.
+  - Verified: `ModelLifecycleIntegrationTest` (Testcontainers Postgres) drives the full flow end to end through the real HTTP API — analyst edits a decision-table row via the guided-JSON endpoint, validates (DMNValidator: schema/model/compilation/decision-table analysis), saves and runs a regression test case (TESTED), a same-user approve attempt is rejected 409 (four-eyes), a different user approves and publishes, and the very next `evaluate` call (no restart) picks up the new version and reflects the edited rule. Also covers: version diff shows the changed rule, rollback republishes the prior content as a new version and evaluate reflects that immediately, and `/api/models` + `/api/models/{key}/history` show the resulting state/audit trail. `DmnXmlEditorTest` proves the guided-table JSON ↔ DMN XML round trip is lossless (unchanged rows re-serialize to equivalent behavior; an edited row changes the evaluated outcome). `DmnValidationServiceTest` confirms the analyser catches an introduced UNIQUE-hit-policy overlap.
+  - Two more real API/library issues found and fixed this milestone (both logged in docs/DECISIONS.md): `DMNValidator.validateUsing(...).theseModels(Definitions...)` can't do schema validation (must use the `Reader`/`File` overload instead), and `pg_notify(...)` must run via `JdbcTemplate.queryForList`/`query`, not `.update()` (Postgres rejects a result-returning statement on `executeUpdate`).
 
 ### M4 — Angular UI
 - [ ] Login, app shell with nav: Rules, Ask AI, Audit.

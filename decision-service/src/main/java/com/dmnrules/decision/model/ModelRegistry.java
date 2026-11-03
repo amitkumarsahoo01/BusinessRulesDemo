@@ -113,7 +113,7 @@ public class ModelRegistry {
         return modelKey + "@" + version;
     }
 
-    static int compareVersions(String a, String b) {
+    public static int compareVersions(String a, String b) {
         String[] partsA = a.split("\\.");
         String[] partsB = b.split("\\.");
         int length = Math.max(partsA.length, partsB.length);

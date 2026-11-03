@@ -71,4 +71,68 @@ public class ModelVersionRepository {
                 row.changeNote(), row.authoredBy(), row.approvedBy(),
                 row.publishedAt() == null ? null : Timestamp.from(row.publishedAt().toInstant()));
     }
+
+    public Optional<ModelVersionRow> findById(UUID id) {
+        return jdbcTemplate.query("SELECT * FROM dmn_model_version WHERE id = ?", ROW_MAPPER, id)
+                .stream().findFirst();
+    }
+
+    public List<ModelVersionRow> findAllByModelKey(String modelKey) {
+        return jdbcTemplate.query(
+                "SELECT * FROM dmn_model_version WHERE model_key = ? ORDER BY created_at",
+                ROW_MAPPER, modelKey);
+    }
+
+    /** The one mutable, in-progress version for a model (DRAFT/VALIDATED/TESTED/APPROVED), if any. */
+    public Optional<ModelVersionRow> findCurrentInProgress(String modelKey) {
+        return jdbcTemplate.query(
+                        """
+                        SELECT * FROM dmn_model_version
+                        WHERE model_key = ? AND status IN ('DRAFT', 'VALIDATED', 'TESTED', 'APPROVED')
+                        ORDER BY created_at DESC LIMIT 1
+                        """,
+                        ROW_MAPPER, modelKey)
+                .stream().findFirst();
+    }
+
+    public Optional<ModelVersionRow> findLatestPublished(String modelKey) {
+        return jdbcTemplate.query(
+                        """
+                        SELECT * FROM dmn_model_version
+                        WHERE model_key = ? AND status = 'PUBLISHED'
+                        ORDER BY published_at DESC LIMIT 1
+                        """,
+                        ROW_MAPPER, modelKey)
+                .stream().findFirst();
+    }
+
+    public List<ModelRow> findAllModels() {
+        return jdbcTemplate.query(
+                "SELECT model_key, name, namespace, owner FROM dmn_model ORDER BY model_key",
+                (rs, n) -> new ModelRow(
+                        rs.getString("model_key"), rs.getString("name"),
+                        rs.getString("namespace"), rs.getString("owner")));
+    }
+
+    public void updateDraftContent(UUID id, String dmnXml, String xmlSha256, String changeNote) {
+        jdbcTemplate.update(
+                "UPDATE dmn_model_version SET dmn_xml = ?, xml_sha256 = ?, change_note = ?, status = 'DRAFT' WHERE id = ?",
+                dmnXml, xmlSha256, changeNote, id);
+    }
+
+    public void updateStatus(UUID id, String status) {
+        jdbcTemplate.update("UPDATE dmn_model_version SET status = ? WHERE id = ?", status, id);
+    }
+
+    public void approve(UUID id, String approvedBy) {
+        jdbcTemplate.update(
+                "UPDATE dmn_model_version SET status = 'APPROVED', approved_by = ? WHERE id = ?",
+                approvedBy, id);
+    }
+
+    public void publish(UUID id, OffsetDateTime publishedAt) {
+        jdbcTemplate.update(
+                "UPDATE dmn_model_version SET status = 'PUBLISHED', published_at = ? WHERE id = ?",
+                Timestamp.from(publishedAt.toInstant()), id);
+    }
 }
