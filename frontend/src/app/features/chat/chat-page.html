@@ -1,0 +1,75 @@
+<section class="page chat-page">
+  <h1>Ask AI</h1>
+
+  @if (pinnedModelKey() || pinnedExecutionId()) {
+    <div class="context-chips">
+      @if (pinnedModelKey()) {
+        <span class="chip">model: {{ pinnedModelKey() }}</span>
+      }
+      @if (pinnedExecutionId()) {
+        <span class="chip">execution: {{ pinnedExecutionId()!.slice(0, 8) }}…</span>
+      }
+    </div>
+  }
+
+  <div class="suggestions">
+    @for (q of suggestedQuestions; track q) {
+      <button type="button" class="suggestion-chip" (click)="ask(q)" [disabled]="sending()">{{ q }}</button>
+    }
+  </div>
+
+  <div class="message-list">
+    @if (messages().length === 0 && !sending()) {
+      <p class="empty">Ask a question below, or try one of the suggestions above.</p>
+    }
+    @for (m of messages(); track $index) {
+      <div class="message" [class.user]="m.role === 'USER'" [class.assistant]="m.role === 'ASSISTANT'">
+        <div class="bubble">
+          @if (m.role === 'ASSISTANT') {
+            <app-markdown-view [content]="m.content" />
+          } @else {
+            {{ m.content }}
+          }
+        </div>
+        @if (m.role === 'ASSISTANT' && parseToolCalls(m).length > 0) {
+          <details class="tool-panel">
+            <summary>How I got this ({{ parseToolCalls(m).length }} tool call{{ parseToolCalls(m).length > 1 ? 's' : '' }})</summary>
+            <ul>
+              @for (t of parseToolCalls(m); track $index) {
+                <li><code>{{ t.tool }}</code> {{ t.argsSummary }}</li>
+              }
+            </ul>
+          </details>
+        }
+      </div>
+    }
+    @if (sending()) {
+      <div class="message assistant">
+        <div class="bubble streaming">
+          @if (streamingText()) {
+            <app-markdown-view [content]="streamingText()" />
+          } @else {
+            <span class="typing">Thinking…</span>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="empty error">{{ error() }}</p>
+  }
+
+  <form class="composer" (ngSubmit)="send()">
+    <input
+      type="text"
+      [(ngModel)]="draft"
+      name="draft"
+      placeholder="Ask about a rule, a decision, or a past execution…"
+      [disabled]="sending() || !conversationId()"
+    />
+    <button type="submit" class="btn primary" [disabled]="sending() || !conversationId() || !draft.trim()">
+      {{ sending() ? 'Sending…' : 'Send' }}
+    </button>
+  </form>
+</section>

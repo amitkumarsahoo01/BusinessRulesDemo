@@ -28,6 +28,25 @@ class DmnXmlEditorTest {
         return Files.readString(Path.of("src/main/resources/seed/dmn/" + fileName), StandardCharsets.UTF_8);
     }
 
+    @Test
+    void readStructure_listsInputsAndDecisionsWithDependencies() throws Exception {
+        ModelStructureDto structure = editor.readStructure(seedXml("loan-eligibility-1.1.0.dmn"));
+
+        assertThat(structure.inputs()).extracting(InputSummaryDto::name).containsExactlyInAnyOrder("Applicant", "Loan");
+
+        assertThat(structure.decisions()).extracting(DecisionNodeDto::name)
+                .containsExactlyInAnyOrder("Debt Ratio", "Risk Category", "Eligibility");
+
+        DecisionNodeDto riskCategory = structure.decisions().stream()
+                .filter(d -> d.name().equals("Risk Category")).findFirst().orElseThrow();
+        assertThat(riskCategory.kind()).isEqualTo("DECISION_TABLE");
+        assertThat(riskCategory.requires()).containsExactlyInAnyOrder("Applicant", "Debt Ratio");
+
+        DecisionNodeDto eligibility = structure.decisions().stream()
+                .filter(d -> d.name().equals("Eligibility")).findFirst().orElseThrow();
+        assertThat(eligibility.requires()).containsExactlyInAnyOrder("Applicant", "Risk Category");
+    }
+
     private DMNResult evaluate(String xml, Map<String, Object> applicant, Map<String, Object> loan) {
         Resource resource = ResourceFactory.newByteArrayResource(xml.getBytes(StandardCharsets.UTF_8));
         resource.setResourceType(ResourceType.DMN);

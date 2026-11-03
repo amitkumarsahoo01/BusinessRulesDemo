@@ -1,0 +1,32 @@
+.markdown-body {
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.markdown-body p {
+  margin: 0 0 0.6rem;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0 0 0.6rem;
+  padding-left: 1.3rem;
+}
+
+.markdown-body code {
+  background: #f3f4f6;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+}
+
+.markdown-body pre {
+  background: #f3f4f6;
+  padding: 0.6rem;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.markdown-body strong {
+  color: #111827;
+}

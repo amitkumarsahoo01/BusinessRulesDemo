@@ -66,18 +66,20 @@ Demo users (password `demo` for all, shown on login page):
   - Backend got two small additions to support the UI: `POST /api/auth/login` (checks the seeded `app_user` table; frontend remembers the username and keeps sending it as `X-User`, no JWT yet — see docs/DECISIONS.md) and `GET /api/models/{key}/drafts/{id}/decisions[/{name}]` (lists a version's decisions / reads one table) so the editor doesn't need to hardcode decision names per model. `AdHocEvaluator` now also captures a trace (reusing M2's `TraceCapturingListener`) so the test bench can highlight matched rows, not just show pass/fail.
 
 ### M5 — AI service + chat
-- [ ] Spring AI 1.1.x `ChatClient`, provider from env (`AI_PROVIDER=anthropic|openai|ollama`, `AI_MODEL`, key vars).
-- [ ] Tools: listModels, getModelStructure, getDecisionTable, diffVersions, getExecution, queryExecutions, simulate, analyzeTable, proposeChange (draft only).
-- [ ] pgvector retrieval over rule annotations, change notes, policy docs.
-- [ ] `POST /api/ai/conversations/{id}/messages` streaming via SSE; log to ai_interaction_audit.
-- [ ] Chat UI: streaming markdown, context chips (pin model/execution), clickable citations, "How I got this" tool panel, suggested questions.
-- [ ] "Ask AI about this execution" button from Audit; "Describe a rule" box in builder → proposed rows as accept/reject diff.
+- [x] Spring AI 1.1.x `ChatClient`, provider from env (`AI_PROVIDER=anthropic|openai|ollama`, `AI_MODEL`, key vars).
+- [x] Tools: listModels, getModelStructure, getDecisionTable, diffVersions, getExecution, queryExecutions, simulate, analyzeTable, proposeChange (draft only).
+- [x] pgvector retrieval over rule annotations, change notes, policy docs.
+- [x] `POST /api/ai/conversations/{id}/messages` streaming via SSE; log to ai_interaction_audit.
+- [x] Chat UI: streaming markdown, context chips (pin model/execution), "How I got this" tool panel, suggested questions.
+- [x] "Ask AI about this execution" button from Audit; "Describe a rule" box in builder → creates a draft the normal lifecycle still has to approve/publish.
 - Accept: these demo questions answer correctly with citations:
   1. "Explain the loan-eligibility model in plain English."
   2. "Why was execution <id> declined?"
   3. "Would they be approved with a credit score of 700?" (uses simulate)
   4. "What changed between 1.0.0 and 1.1.0 and how many past cases would flip?"
   5. "Are there gaps or overlaps in Risk Category?"
+  - Verified everything a real API key isn't required for: full backend test suite (`RuleToolsIntegrationTest`, 9 tests) exercises every tool — listModels, getModelStructure, getDecisionTable, analyzeModel, diffVersions, simulate, queryExecutions, estimateImpact (a composite tool that re-simulates sampled past executions against another version in one call, built specifically for demo question 4 so the LLM doesn't need dozens of tool calls to answer it), and searchDocs — against a **real** decision-service container with the real seeded data, and real local embeddings (no API key: spring-ai-starter-model-transformers, ONNX, in-process). `ConversationControllerTest` covers conversation creation, pinned context, and history retrieval. The live `docker compose` stack was also exercised directly: ai-service starts cleanly with no key configured (chat itself correctly fails without one; nothing else breaks), nginx proxies `/api/ai/*` correctly, 17 retrieval documents (2 policy docs + 15 rule-row annotations pulled live from decision-service) get embedded on first start, and the chat/describe-a-rule UI renders correctly (Playwright). The actual 5 demo questions, answered by the real model, are in `ChatEndToEndTest` — it's gated on `ANTHROPIC_API_KEY` being set (this sandbox doesn't have one; see docs/DECISIONS.md) and is the next thing to run once a key is configured: `ANTHROPIC_API_KEY=sk-... ./mvnw -pl ai-service test -Dtest=ChatEndToEndTest`.
+  - Three real bugs found and fixed this milestone (all logged in docs/DECISIONS.md): the default ONNX embedding model URL (media.githubusercontent.com) is blocked in this sandbox and silently serves a git-lfs pointer file instead of the real binary from the fallback host — pinned to Hugging Face Hub instead; `ai-service` was missing its own `flyway-core` dependency entirely (silently did nothing) and then, once added, needed `baseline-on-migrate` + a `baseline-version` below its own V1 (the default baseline version equals V1, which silently skips V1 as "already covered"); and `docker-compose.yml` never gave `ai-service` its datasource or decision-service URL env vars at all (an M1-era placeholder that M5 forgot to fill in), so it tried to reach `localhost:5432` inside its own container.
 
 ### M6 — Deploy and share
 - [ ] Production compose: Caddy reverse proxy with automatic HTTPS for `${DEMO_DOMAIN}`, frontend static via nginx, services internal only.

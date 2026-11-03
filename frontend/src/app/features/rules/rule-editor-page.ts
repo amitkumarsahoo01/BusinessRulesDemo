@@ -2,6 +2,7 @@ import { DatePipe, JsonPipe } from '@angular/common';
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ChatApiService } from '../../core/api/chat-api.service';
 import { ModelsApiService } from '../../core/api/models-api.service';
 import {
   DecisionDiff,
@@ -15,13 +16,14 @@ import {
   TestRunResult,
   ValidationResult,
 } from '../../core/models/rules.models';
+import { MarkdownView } from '../../shared/markdown-view/markdown-view';
 import { TraceView } from '../../shared/trace-view/trace-view';
 
 const HIT_POLICIES = ['UNIQUE', 'FIRST', 'PRIORITY', 'ANY', 'COLLECT', 'RULE_ORDER', 'OUTPUT_ORDER'];
 
 @Component({
   selector: 'app-rule-editor-page',
-  imports: [FormsModule, RouterLink, TraceView, JsonPipe, DatePipe],
+  imports: [FormsModule, RouterLink, TraceView, MarkdownView, JsonPipe, DatePipe],
   templateUrl: './rule-editor-page.html',
   styleUrl: './rule-editor-page.scss',
 })
@@ -68,9 +70,14 @@ export class RuleEditorPage implements OnInit {
     () => this.decisions().find((d) => d.name === this.selectedDecisionName())?.kind === 'DECISION_TABLE',
   );
 
+  describeRuleText = '';
+  readonly describingRule = signal(false);
+  readonly describeRuleResponse = signal('');
+
   constructor(
     private readonly route: ActivatedRoute,
     private readonly modelsApi: ModelsApiService,
+    private readonly chatApi: ChatApiService,
   ) {}
 
   ngOnInit(): void {
@@ -351,6 +358,41 @@ export class RuleEditorPage implements OnInit {
     const v = this.currentVersion();
     if (v) {
       this.currentVersion.set({ ...v, status });
+    }
+  }
+
+  describeRule(): void {
+    const text = this.describeRuleText.trim();
+    if (!text || this.describingRule()) {
+      return;
+    }
+    this.describingRule.set(true);
+    this.describeRuleResponse.set('');
+    this.chatApi
+      .startConversation({ pinnedModelKey: this.modelKey(), pinnedVersion: null, pinnedExecutionId: null })
+      .subscribe({
+        next: ({ conversationId }) => this.streamDescribeRule(conversationId, text),
+        error: () => {
+          this.describingRule.set(false);
+          this.actionError.set('Could not reach the AI service.');
+        },
+      });
+  }
+
+  private async streamDescribeRule(conversationId: string, text: string): Promise<void> {
+    try {
+      for await (const chunk of this.chatApi.streamMessage(conversationId, text)) {
+        this.describeRuleResponse.update((s) => s + chunk);
+      }
+    } catch {
+      this.actionError.set('The assistant could not respond. Please try again.');
+    } finally {
+      this.describingRule.set(false);
+      this.describeRuleText = '';
+      // A proposeChange tool call (if the AI made one) only ever creates/updates a draft, never
+      // publishes (CLAUDE.md rule 6) -- reloading shows it for the analyst to review as a normal
+      // draft, same as any other edit.
+      this.loadAll();
     }
   }
 }

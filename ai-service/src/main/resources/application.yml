@@ -4,6 +4,53 @@ server:
 spring:
   application:
     name: ai-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/dmn_rules}
+    username: ${SPRING_DATASOURCE_USERNAME:dmn_rules}
+    password: ${SPRING_DATASOURCE_PASSWORD:dmn_rules}
+  flyway:
+    enabled: true
+    # Shares the Postgres instance with decision-service but must not share its migration
+    # history table, or Flyway would try to validate each service's migrations against the
+    # other's (see docs/DECISIONS.md). baseline-on-migrate is required alongside that: with a
+    # fresh/separate history table name, Flyway sees decision-service's tables already in the
+    # "public" schema and refuses to proceed ("non-empty schema but no schema history table")
+    # unless told this is expected.
+    table: flyway_schema_history_ai
+    baseline-on-migrate: true
+    # Default baseline-version is "1", same as this module's own V1 migration, so without this
+    # Flyway treats V1 as already covered by the baseline and silently never applies it (ai_
+    # conversation never gets created). Baselining below the lowest real migration version fixes it.
+    baseline-version: "0"
+  ai:
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      chat:
+        options:
+          model: ${AI_MODEL:claude-sonnet-4-5-20250929}
+    vectorstore:
+      pgvector:
+        initialize-schema: true
+        table-name: rule_doc_embedding
+        dimensions: 384
+    embedding:
+      transformer:
+        onnx:
+          # The library default (media.githubusercontent.com, GitHub's git-lfs media CDN) is
+          # blocked in some sandboxed/restricted-egress environments. raw.githubusercontent.com
+          # is reachable there but serves the git-lfs *pointer* file for this path (it's
+          # LFS-tracked), not the real ~90MB binary, which breaks ONNX parsing. Hugging Face Hub
+          # serves the same published all-MiniLM-L6-v2 ONNX export and is reachable. See
+          # docs/DECISIONS.md.
+          model-uri: https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx
+
+rules-ai:
+  decision-service-base-url: ${DECISION_SERVICE_URL:http://localhost:8080}
+  max-tool-calls: 8
+
+demo:
+  seed:
+    enabled: ${RESET_DEMO_ON_START:true}
 
 management:
   endpoints:

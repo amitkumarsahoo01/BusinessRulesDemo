@@ -2,12 +2,14 @@ package com.dmnrules.decision.author;
 
 import org.kie.dmn.api.marshalling.DMNMarshaller;
 import org.kie.dmn.backend.marshalling.v1x.DMNMarshallerFactory;
+import org.kie.dmn.model.api.DMNElementReference;
 import org.kie.dmn.model.api.Decision;
 import org.kie.dmn.model.api.DecisionRule;
 import org.kie.dmn.model.api.DecisionTable;
 import org.kie.dmn.model.api.Definitions;
 import org.kie.dmn.model.api.HitPolicy;
 import org.kie.dmn.model.api.InputClause;
+import org.kie.dmn.model.api.InputData;
 import org.kie.dmn.model.api.LiteralExpression;
 import org.kie.dmn.model.api.OutputClause;
 import org.kie.dmn.model.api.UnaryTests;
@@ -17,7 +19,10 @@ import org.kie.dmn.model.v1_6.TUnaryTests;
 import org.springframework.stereotype.Component;
 
 import javax.xml.namespace.QName;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -48,6 +53,40 @@ public class DmnXmlEditor {
                 .map(d -> new DecisionSummaryDto(
                         d.getName(), d.getExpression() instanceof DecisionTable ? "DECISION_TABLE" : "LITERAL_EXPRESSION"))
                 .toList();
+    }
+
+    /** Compact DRG summary for the AI's getModelStructure tool: inputs, decisions, and dependencies. */
+    public ModelStructureDto readStructure(String dmnXml) {
+        Definitions definitions = parse(dmnXml);
+        Map<String, String> idToName = new HashMap<>();
+        for (var element : definitions.getDrgElement()) {
+            idToName.put(element.getId(), element.getName());
+        }
+
+        List<InputSummaryDto> inputs = definitions.getDrgElement().stream()
+                .filter(InputData.class::isInstance)
+                .map(InputData.class::cast)
+                .map(i -> new InputSummaryDto(
+                        i.getName(), typeRefText(i.getVariable() == null ? null : i.getVariable().getTypeRef())))
+                .toList();
+
+        List<DecisionNodeDto> decisions = definitions.getDrgElement().stream()
+                .filter(Decision.class::isInstance)
+                .map(Decision.class::cast)
+                .map(d -> new DecisionNodeDto(
+                        d.getName(),
+                        d.getExpression() instanceof DecisionTable ? "DECISION_TABLE" : "LITERAL_EXPRESSION",
+                        d.getInformationRequirement().stream()
+                                .map(ir -> {
+                                    DMNElementReference ref = ir.getRequiredInput() != null
+                                            ? ir.getRequiredInput() : ir.getRequiredDecision();
+                                    return ref == null ? null : idToName.get(ref.getHref().replace("#", ""));
+                                })
+                                .filter(Objects::nonNull)
+                                .toList()))
+                .toList();
+
+        return new ModelStructureDto(inputs, decisions);
     }
 
     public DecisionTableDto readDecisionTable(String dmnXml, String decisionName) {

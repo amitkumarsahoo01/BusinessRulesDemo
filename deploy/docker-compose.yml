@@ -34,6 +34,10 @@ services:
       context: ..
       dockerfile: ai-service/Dockerfile
     environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/dmn_rules
+      SPRING_DATASOURCE_USERNAME: dmn_rules
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-dmn_rules}
+      DECISION_SERVICE_URL: http://decision-service:8080
       AI_PROVIDER: ${AI_PROVIDER:-anthropic}
       AI_MODEL: ${AI_MODEL:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
@@ -41,6 +45,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      decision-service:
+        condition: service_started
     ports:
       - "8081:8081"
 

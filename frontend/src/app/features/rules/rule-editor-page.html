@@ -186,6 +186,30 @@
       </div>
 
       <div class="card">
+        <h2>Describe a rule</h2>
+        <p class="hint">
+          Describe a change in plain English and the AI will propose it as a draft — it never
+          publishes anything itself; you still validate, test, approve and publish normally.
+        </p>
+        <div class="describe-rule">
+          <textarea
+            [(ngModel)]="describeRuleText"
+            rows="2"
+            placeholder="e.g. Applicants under 21 need review regardless of their risk category"
+            [disabled]="describingRule()"
+          ></textarea>
+          <button type="button" class="btn" [disabled]="describingRule() || !describeRuleText.trim()" (click)="describeRule()">
+            {{ describingRule() ? 'Thinking…' : 'Propose change' }}
+          </button>
+        </div>
+        @if (describeRuleResponse() || describingRule()) {
+          <div class="describe-rule-response">
+            <app-markdown-view [content]="describeRuleResponse()" />
+          </div>
+        }
+      </div>
+
+      <div class="card">
         <h2>Test bench</h2>
         <table class="data-table">
           <thead><tr><th>Name</th><th>Inputs</th><th>Expected</th></tr></thead>

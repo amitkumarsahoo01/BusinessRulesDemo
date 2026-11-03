@@ -6,13 +6,16 @@ import com.dmnrules.decision.author.CreateTestCaseRequest;
 import com.dmnrules.decision.author.DecisionDiffEntry;
 import com.dmnrules.decision.author.DecisionSummaryDto;
 import com.dmnrules.decision.author.DecisionTableDto;
+import com.dmnrules.decision.author.DmnValidationService;
 import com.dmnrules.decision.author.DmnXmlEditor;
 import com.dmnrules.decision.author.ModelLifecycleService;
+import com.dmnrules.decision.author.ModelStructureDto;
 import com.dmnrules.decision.author.ModelSummaryDto;
 import com.dmnrules.decision.author.TestCaseRepository;
 import com.dmnrules.decision.author.TestCaseRow;
 import com.dmnrules.decision.author.TestRunResult;
 import com.dmnrules.decision.author.UpdateDraftRequest;
+import com.dmnrules.decision.author.ValidationMessageDto;
 import com.dmnrules.decision.author.ValidationResult;
 import com.dmnrules.decision.model.ModelRow;
 import com.dmnrules.decision.model.ModelVersionRepository;
@@ -38,15 +41,18 @@ public class ModelsController {
     private final TestCaseRepository testCaseRepository;
     private final ModelLifecycleService lifecycleService;
     private final DmnXmlEditor xmlEditor;
+    private final DmnValidationService validationService;
 
     public ModelsController(
             ModelVersionRepository versionRepository, RuleChangeAuditRepository auditRepository,
-            TestCaseRepository testCaseRepository, ModelLifecycleService lifecycleService, DmnXmlEditor xmlEditor) {
+            TestCaseRepository testCaseRepository, ModelLifecycleService lifecycleService, DmnXmlEditor xmlEditor,
+            DmnValidationService validationService) {
         this.versionRepository = versionRepository;
         this.auditRepository = auditRepository;
         this.testCaseRepository = testCaseRepository;
         this.lifecycleService = lifecycleService;
         this.xmlEditor = xmlEditor;
+        this.validationService = validationService;
     }
 
     @GetMapping
@@ -67,6 +73,19 @@ public class ModelsController {
     @GetMapping("/{modelKey}/versions")
     public List<ModelVersionRow> versions(@PathVariable String modelKey) {
         return versionRepository.findAllByModelKey(modelKey);
+    }
+
+    /** Resolves a model + optional version string to its version row (latest published if omitted). */
+    @GetMapping("/{modelKey}/resolve")
+    public ModelVersionRow resolve(@PathVariable String modelKey, @RequestParam(required = false) String version) {
+        if (version != null) {
+            return versionRepository.findByKeyAndVersion(modelKey, version)
+                    .orElseThrow(() -> new com.dmnrules.decision.model.ModelNotFoundException(
+                            "Model '" + modelKey + "' has no version '" + version + "'"));
+        }
+        return versionRepository.findLatestPublished(modelKey)
+                .orElseThrow(() -> new com.dmnrules.decision.model.ModelNotFoundException(
+                        "Model '" + modelKey + "' has no published version"));
     }
 
     @GetMapping("/{modelKey}/versions/{v1}/diff/{v2}")
@@ -92,6 +111,16 @@ public class ModelsController {
                 .filter(v -> v.modelKey().equals(modelKey))
                 .orElseThrow(() -> new com.dmnrules.decision.model.ModelNotFoundException(
                         "Version '" + id + "' not found for model '" + modelKey + "'"));
+    }
+
+    @GetMapping("/{modelKey}/drafts/{id}/structure")
+    public ModelStructureDto structure(@PathVariable String modelKey, @PathVariable UUID id) {
+        return xmlEditor.readStructure(getVersion(modelKey, id).dmnXml());
+    }
+
+    @GetMapping("/{modelKey}/drafts/{id}/analysis")
+    public List<ValidationMessageDto> analysis(@PathVariable String modelKey, @PathVariable UUID id) {
+        return validationService.validate(getVersion(modelKey, id).dmnXml());
     }
 
     @GetMapping("/{modelKey}/drafts/{id}/decisions")
