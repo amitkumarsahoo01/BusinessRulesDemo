@@ -121,17 +121,18 @@ public class ModelLifecycleService {
     }
 
     private TestCaseResultDto runOne(ModelVersionRow row, TestCaseRow testCase) {
-        Map<String, Object> actual = safeEvaluate(row.dmnXml(), testCase.inputs());
+        AdHocEvaluationResult result = safeEvaluate(row.dmnXml(), testCase.inputs());
         boolean passed = testCase.expectedOutputs().entrySet().stream()
-                .allMatch(expected -> lenientEquals(actual.get(expected.getKey()), expected.getValue()));
-        return new TestCaseResultDto(testCase.id(), testCase.name(), passed, actual, testCase.expectedOutputs());
+                .allMatch(expected -> lenientEquals(result.outputs().get(expected.getKey()), expected.getValue()));
+        return new TestCaseResultDto(
+                testCase.id(), testCase.name(), passed, result.outputs(), testCase.expectedOutputs(), result.trace());
     }
 
-    private Map<String, Object> safeEvaluate(String dmnXml, Map<String, Object> inputs) {
+    private AdHocEvaluationResult safeEvaluate(String dmnXml, Map<String, Object> inputs) {
         try {
             return adHocEvaluator.evaluate(dmnXml, inputs);
         } catch (RuntimeException e) {
-            return Map.of("__error__", String.valueOf(e.getMessage()));
+            return new AdHocEvaluationResult(Map.of("__error__", String.valueOf(e.getMessage())), "FAILED", List.of());
         }
     }
 

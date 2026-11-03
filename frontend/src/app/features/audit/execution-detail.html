@@ -1,0 +1,41 @@
+<section class="page">
+  <a class="back-link" routerLink="/audit">← All executions</a>
+
+  @if (loading()) {
+    <p class="empty">Loading…</p>
+  } @else if (notFound()) {
+    <p class="empty error">Execution not found.</p>
+  } @else if (execution()) {
+    <header class="detail-header">
+      <div>
+        <h1>{{ execution()!.modelKey }} <span class="version">v{{ execution()!.version }}</span></h1>
+        <p class="meta">
+          {{ execution()!.executedAt | date: 'medium' }} · caller {{ execution()!.caller }}
+          · <span class="status-pill" [class]="execution()!.status.toLowerCase()">{{ execution()!.status }}</span>
+        </p>
+      </div>
+      <button type="button" class="btn primary" (click)="askAiAboutThis()">Ask AI about this execution</button>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Inputs</h2>
+        <pre>{{ execution()!.inputs | json }}</pre>
+      </div>
+      <div class="card">
+        <h2>Outputs</h2>
+        <pre>{{ execution()!.outputs | json }}</pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Trace</h2>
+      <app-trace-view [trace]="execution()!.trace" />
+    </div>
+
+    <div class="card">
+      <h2>Audit hash</h2>
+      <code class="row-hash">{{ execution()!.rowHash }}</code>
+    </div>
+  }
+</section>

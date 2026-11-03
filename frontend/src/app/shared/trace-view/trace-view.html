@@ -1,0 +1,26 @@
+@if (trace().length === 0) {
+  <p class="empty">No trace captured.</p>
+} @else {
+  <ol class="trace-list">
+    @for (step of trace(); track step.seq) {
+      <li class="trace-step" [class.table]="step.nodeType === 'DECISION_TABLE'">
+        <span class="node-type">{{ step.nodeType }}</span>
+        <span class="node-name">{{ step.nodeName }}</span>
+        @if (step.matchedRules && step.matchedRules.length > 0) {
+          <span class="matched-rules">
+            matched row{{ step.matchedRules.length > 1 ? 's' : '' }}:
+            @for (rule of step.matchedRules; track rule) {
+              <span class="rule-badge">{{ rule }}</span>
+            }
+          </span>
+        }
+        @if (step.nodeType === 'DECISION') {
+          <span class="result">= {{ resultText(step.result) }}</span>
+        }
+        @if (step.durationMs !== null) {
+          <span class="duration">{{ step.durationMs }}ms</span>
+        }
+      </li>
+    }
+  </ol>
+}

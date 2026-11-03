@@ -1,0 +1,30 @@
+<section class="page">
+  <h1>Rules</h1>
+
+  @if (loading()) {
+    <p class="empty">Loading models…</p>
+  } @else if (error()) {
+    <p class="empty error">{{ error() }}</p>
+  } @else if (models().length === 0) {
+    <p class="empty">No models yet.</p>
+  } @else {
+    <div class="model-grid">
+      @for (model of models(); track model.modelKey) {
+        <a class="model-card" [routerLink]="['/rules', model.modelKey]">
+          <h2>{{ model.name }}</h2>
+          <p class="namespace">{{ model.namespace }}</p>
+          <div class="badges">
+            @if (model.latestPublishedVersion) {
+              <span class="badge published">Published {{ model.latestPublishedVersion }}</span>
+            } @else {
+              <span class="badge none">Not published</span>
+            }
+            @if (model.inProgressVersion) {
+              <span class="badge draft">{{ model.inProgressStatus }} {{ model.inProgressVersion }}</span>
+            }
+          </div>
+        </a>
+      }
+    </div>
+  }
+</section>

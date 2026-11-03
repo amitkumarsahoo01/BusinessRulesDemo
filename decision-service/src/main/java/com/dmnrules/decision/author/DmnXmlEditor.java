@@ -40,6 +40,16 @@ public class DmnXmlEditor {
         return marshaller.marshal(definitions);
     }
 
+    public List<DecisionSummaryDto> listDecisions(String dmnXml) {
+        Definitions definitions = parse(dmnXml);
+        return definitions.getDrgElement().stream()
+                .filter(Decision.class::isInstance)
+                .map(Decision.class::cast)
+                .map(d -> new DecisionSummaryDto(
+                        d.getName(), d.getExpression() instanceof DecisionTable ? "DECISION_TABLE" : "LITERAL_EXPRESSION"))
+                .toList();
+    }
+
     public DecisionTableDto readDecisionTable(String dmnXml, String decisionName) {
         Definitions definitions = parse(dmnXml);
         DecisionTable table = findDecisionTable(definitions, decisionName);

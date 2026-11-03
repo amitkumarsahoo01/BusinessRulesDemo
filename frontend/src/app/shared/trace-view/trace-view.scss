@@ -1,0 +1,71 @@
+.trace-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.trace-step {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  font-size: 0.82rem;
+}
+
+.trace-step.table {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.node-type {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.node-name {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.matched-rules {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #4338ca;
+  font-size: 0.78rem;
+}
+
+.rule-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  background: #4f46e5;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.72rem;
+  padding: 0 0.3rem;
+}
+
+.result {
+  color: #166534;
+  font-weight: 600;
+}
+
+.duration {
+  margin-left: auto;
+  color: #9ca3af;
+  font-size: 0.72rem;
+}

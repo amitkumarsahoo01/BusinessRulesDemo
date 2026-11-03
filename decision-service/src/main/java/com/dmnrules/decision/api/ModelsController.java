@@ -4,6 +4,9 @@ import com.dmnrules.decision.audit.RuleChangeAuditRepository;
 import com.dmnrules.decision.audit.RuleChangeAuditRow;
 import com.dmnrules.decision.author.CreateTestCaseRequest;
 import com.dmnrules.decision.author.DecisionDiffEntry;
+import com.dmnrules.decision.author.DecisionSummaryDto;
+import com.dmnrules.decision.author.DecisionTableDto;
+import com.dmnrules.decision.author.DmnXmlEditor;
 import com.dmnrules.decision.author.ModelLifecycleService;
 import com.dmnrules.decision.author.ModelSummaryDto;
 import com.dmnrules.decision.author.TestCaseRepository;
@@ -34,14 +37,16 @@ public class ModelsController {
     private final RuleChangeAuditRepository auditRepository;
     private final TestCaseRepository testCaseRepository;
     private final ModelLifecycleService lifecycleService;
+    private final DmnXmlEditor xmlEditor;
 
     public ModelsController(
             ModelVersionRepository versionRepository, RuleChangeAuditRepository auditRepository,
-            TestCaseRepository testCaseRepository, ModelLifecycleService lifecycleService) {
+            TestCaseRepository testCaseRepository, ModelLifecycleService lifecycleService, DmnXmlEditor xmlEditor) {
         this.versionRepository = versionRepository;
         this.auditRepository = auditRepository;
         this.testCaseRepository = testCaseRepository;
         this.lifecycleService = lifecycleService;
+        this.xmlEditor = xmlEditor;
     }
 
     @GetMapping
@@ -87,6 +92,17 @@ public class ModelsController {
                 .filter(v -> v.modelKey().equals(modelKey))
                 .orElseThrow(() -> new com.dmnrules.decision.model.ModelNotFoundException(
                         "Version '" + id + "' not found for model '" + modelKey + "'"));
+    }
+
+    @GetMapping("/{modelKey}/drafts/{id}/decisions")
+    public List<DecisionSummaryDto> listDecisions(@PathVariable String modelKey, @PathVariable UUID id) {
+        return xmlEditor.listDecisions(getVersion(modelKey, id).dmnXml());
+    }
+
+    @GetMapping("/{modelKey}/drafts/{id}/decisions/{decisionName}")
+    public DecisionTableDto readDecisionTable(
+            @PathVariable String modelKey, @PathVariable UUID id, @PathVariable String decisionName) {
+        return xmlEditor.readDecisionTable(getVersion(modelKey, id).dmnXml(), decisionName);
     }
 
     @PostMapping("/{modelKey}/drafts/{id}/validate")

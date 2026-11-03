@@ -1,0 +1,33 @@
+<div class="login-page">
+  <form class="login-card" (ngSubmit)="submit()">
+    <h1>DMN Rules Platform</h1>
+    <p class="subtitle">Sign in to continue</p>
+
+    <div class="demo-accounts">
+      @for (account of demoAccounts; track account.username) {
+        <button type="button" class="account-chip" (click)="selectAccount(account.username)">
+          {{ account.label }}
+        </button>
+      }
+    </div>
+
+    <label>
+      Username
+      <input type="text" name="username" [(ngModel)]="username" autocomplete="username" required />
+    </label>
+    <label>
+      Password
+      <input type="password" name="password" [(ngModel)]="password" autocomplete="current-password" required />
+    </label>
+
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+
+    <button type="submit" class="primary" [disabled]="loading()">
+      {{ loading() ? 'Signing in…' : 'Sign in' }}
+    </button>
+
+    <p class="hint">Demo password for all accounts is <code>demo</code>.</p>
+  </form>
+</div>

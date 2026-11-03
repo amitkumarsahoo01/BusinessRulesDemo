@@ -1,0 +1,62 @@
+<section class="page">
+  <h1>Audit</h1>
+
+  <div class="card filters">
+    <label>
+      Model
+      <input type="text" [(ngModel)]="modelKey" placeholder="loan-eligibility" (keyup.enter)="search()" />
+    </label>
+    <label>
+      Status
+      <select [(ngModel)]="status">
+        <option value="">Any</option>
+        <option value="SUCCEEDED">Succeeded</option>
+        <option value="FAILED">Failed</option>
+      </select>
+    </label>
+    <label>
+      Caller
+      <input type="text" [(ngModel)]="caller" placeholder="analyst" (keyup.enter)="search()" />
+    </label>
+    <button type="button" class="btn primary" (click)="search()">Search</button>
+  </div>
+
+  @if (loading()) {
+    <p class="empty">Loading…</p>
+  } @else if (!result() || result()!.items.length === 0) {
+    <p class="empty">No executions match these filters.</p>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Executed</th>
+          <th>Model</th>
+          <th>Version</th>
+          <th>Caller</th>
+          <th>Status</th>
+          <th>Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (e of result()!.items; track e.id) {
+          <tr>
+            <td><a [routerLink]="['/audit', e.id]">{{ e.executedAt | date: 'short' }}</a></td>
+            <td>{{ e.modelKey }}</td>
+            <td>{{ e.version }}</td>
+            <td>{{ e.caller }}</td>
+            <td><span class="status-pill" [class]="e.status.toLowerCase()">{{ e.status }}</span></td>
+            <td>{{ e.durationMs }}ms</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <div class="pager">
+      <button type="button" class="btn" [disabled]="page === 0" (click)="prevPage()">← Prev</button>
+      <span>Page {{ page + 1 }} · {{ result()!.total }} total</span>
+      <button type="button" class="btn" [disabled]="(page + 1) * pageSize >= result()!.total" (click)="nextPage()">
+        Next →
+      </button>
+    </div>
+  }
+</section>

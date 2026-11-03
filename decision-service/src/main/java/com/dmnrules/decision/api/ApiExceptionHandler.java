@@ -3,6 +3,7 @@ package com.dmnrules.decision.api;
 import com.dmnrules.decision.audit.ExecutionNotFoundException;
 import com.dmnrules.decision.author.ApproverMustDifferFromAuthorException;
 import com.dmnrules.decision.author.InvalidLifecycleTransitionException;
+import com.dmnrules.decision.auth.InvalidCredentialsException;
 import com.dmnrules.decision.model.ModelNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -45,6 +46,13 @@ public class ApiExceptionHandler {
     public ProblemDetail handleApproverMustDiffer(ApproverMustDifferFromAuthorException e) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
         problem.setTitle("Four-eyes violation");
+        return problem;
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ProblemDetail handleInvalidCredentials(InvalidCredentialsException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
+        problem.setTitle("Invalid credentials");
         return problem;
     }
 }

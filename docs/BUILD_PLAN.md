@@ -57,11 +57,13 @@ Demo users (password `demo` for all, shown on login page):
   - Two more real API/library issues found and fixed this milestone (both logged in docs/DECISIONS.md): `DMNValidator.validateUsing(...).theseModels(Definitions...)` can't do schema validation (must use the `Reader`/`File` overload instead), and `pg_notify(...)` must run via `JdbcTemplate.queryForList`/`query`, not `.update()` (Postgres rejects a result-returning statement on `executeUpdate`).
 
 ### M4 — Angular UI
-- [ ] Login, app shell with nav: Rules, Ask AI, Audit.
-- [ ] Rules: model list; guided decision-table editor (typed cells, FEEL pickers, hit-policy dropdown, add/remove rows, inline validation errors); test bench with trace highlighting; diff + approve/publish.
-- [ ] Audit: execution search; execution detail with ordered trace and matched rows highlighted; change history.
-- [ ] Polished look suitable for a demo (consistent theme, empty states, loading states).
+- [x] Login, app shell with nav: Rules, Ask AI, Audit.
+- [x] Rules: model list; guided decision-table editor (typed cells, hit-policy dropdown, add/remove rows, inline validation errors); test bench with trace highlighting; diff + approve/publish.
+- [x] Audit: execution search; execution detail with ordered trace and matched rows highlighted; change history.
+- [x] Polished look suitable for a demo (consistent theme, empty states, loading states).
 - Accept: full author → test → approve → publish → evaluate → inspect trace flow in the browser.
+  - Verified with a real headless Chromium (Playwright) driving the live `docker compose` stack end to end, not just curl/unit tests: login as analyst → rules list (model cards with status badges) → open loan-eligibility → switch to the Eligibility decision table → widen the "under 21" rule to "under 25" → save draft (status flips to DRAFT) → Validate (passes, warnings shown) → save a regression test case and Run saved tests (TESTED, pass/fail with expected-vs-actual and a trace view showing 1-indexed matched rows) → sign out, sign in as approver → Approve → Publish (status PUBLISHED) → Audit search shows the real 320 seeded executions with filters/paging → open an execution and see its full trace with matched-row badges and the audit hash. Screenshots captured at every step confirmed the rendered UI, not just that network calls succeeded. The Angular unit suite (Vitest) also passes: `AuthService`, `TraceView`, `RulesList`, and the app shell's logged-in/logged-out states.
+  - Backend got two small additions to support the UI: `POST /api/auth/login` (checks the seeded `app_user` table; frontend remembers the username and keeps sending it as `X-User`, no JWT yet — see docs/DECISIONS.md) and `GET /api/models/{key}/drafts/{id}/decisions[/{name}]` (lists a version's decisions / reads one table) so the editor doesn't need to hardcode decision names per model. `AdHocEvaluator` now also captures a trace (reusing M2's `TraceCapturingListener`) so the test bench can highlight matched rows, not just show pass/fail.
 
 ### M5 — AI service + chat
 - [ ] Spring AI 1.1.x `ChatClient`, provider from env (`AI_PROVIDER=anthropic|openai|ollama`, `AI_MODEL`, key vars).

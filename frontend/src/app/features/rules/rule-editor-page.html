@@ -1,0 +1,295 @@
+<section class="page editor-page">
+  <a class="back-link" routerLink="/rules">← All models</a>
+
+  @if (loading() && !decisionTable()) {
+    <p class="empty">Loading…</p>
+  } @else {
+    <header class="editor-header">
+      <div>
+        <h1>{{ model()?.name ?? modelKey() }}</h1>
+        <p class="namespace">{{ model()?.namespace }}</p>
+      </div>
+      @if (currentVersion()) {
+        <div class="version-badge">
+          <span class="status-pill" [class]="currentVersion()!.status.toLowerCase()">{{ currentVersion()!.status }}</span>
+          <span class="version-number">v{{ currentVersion()!.version }}</span>
+          <span class="authored-by">by {{ currentVersion()!.authoredBy }}</span>
+        </div>
+      }
+    </header>
+
+    @if (actionError()) {
+      <p class="empty error">{{ actionError() }}</p>
+    }
+
+    <div class="decision-tabs">
+      @for (decision of decisions(); track decision.name) {
+        <button
+          type="button"
+          class="tab"
+          [class.active]="decision.name === selectedDecisionName()"
+          (click)="selectDecision(decision.name)"
+        >
+          {{ decision.name }}
+          <span class="kind">{{ decision.kind === 'DECISION_TABLE' ? 'table' : 'formula' }}</span>
+        </button>
+      }
+    </div>
+
+    @if (!selectedDecisionIsTable()) {
+      <div class="card">
+        <p class="empty">
+          "{{ selectedDecisionName() }}" is a literal-expression decision — the guided grid editor only
+          edits decision tables. Use the full DMN diagram editor (stretch goal) for formulas.
+        </p>
+      </div>
+    } @else if (decisionTable()) {
+      <div class="card editor-card">
+        <div class="table-toolbar">
+          <label>
+            Hit policy
+            <select [(ngModel)]="editableHitPolicy">
+              @for (policy of hitPolicies; track policy) {
+                <option [value]="policy">{{ policy }}</option>
+              }
+            </select>
+          </label>
+          <button type="button" class="btn" (click)="addRow()">+ Add row</button>
+          <button type="button" class="btn primary" [disabled]="saving()" (click)="saveDraft()">
+            {{ saving() ? 'Saving…' : 'Save draft' }}
+          </button>
+        </div>
+
+        <div class="table-scroll">
+          <table class="data-table rule-grid">
+            <thead>
+              <tr>
+                <th></th>
+                @for (col of decisionTable()!.inputs; track col.label) {
+                  <th>{{ col.label }}</th>
+                }
+                <th>{{ decisionTable()!.output?.label ?? 'Output' }}</th>
+                <th>Annotation</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (rule of editableRules(); track $index; let ruleIndex = $index) {
+                <tr>
+                  <td class="row-number">{{ ruleIndex + 1 }}</td>
+                  @for (entry of rule.inputEntries; track $index; let colIndex = $index) {
+                    <td>
+                      <input
+                        type="text"
+                        class="cell-input"
+                        [value]="entry"
+                        (change)="updateCell(ruleIndex, colIndex, $any($event.target).value)"
+                      />
+                    </td>
+                  }
+                  <td>
+                    <input
+                      type="text"
+                      class="cell-input output"
+                      [value]="rule.outputEntry"
+                      (change)="updateOutput(ruleIndex, $any($event.target).value)"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      class="cell-input annotation"
+                      [value]="rule.description"
+                      (change)="updateDescription(ruleIndex, $any($event.target).value)"
+                    />
+                  </td>
+                  <td>
+                    <button type="button" class="remove-row" (click)="removeRow(ruleIndex)" title="Remove row">✕</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="action-bar">
+          <button type="button" class="btn" [disabled]="busyAction() === 'validate'" (click)="validate()">
+            {{ busyAction() === 'validate' ? 'Validating…' : 'Validate' }}
+          </button>
+          <button type="button" class="btn" [disabled]="busyAction() === 'test'" (click)="runTests()">
+            {{ busyAction() === 'test' ? 'Running…' : 'Run saved tests' }}
+          </button>
+          <button
+            type="button"
+            class="btn"
+            [disabled]="busyAction() === 'approve' || currentVersion()?.status !== 'TESTED'"
+            (click)="approve()"
+          >
+            {{ busyAction() === 'approve' ? 'Approving…' : 'Approve' }}
+          </button>
+          <button
+            type="button"
+            class="btn primary"
+            [disabled]="busyAction() === 'publish' || currentVersion()?.status !== 'APPROVED'"
+            (click)="publish()"
+          >
+            {{ busyAction() === 'publish' ? 'Publishing…' : 'Publish' }}
+          </button>
+        </div>
+
+        @if (validationResult()) {
+          <div class="result-panel" [class.ok]="validationResult()!.ok">
+            <h3>Validation {{ validationResult()!.ok ? 'passed' : 'found issues' }}</h3>
+            @if (validationResult()!.messages.length === 0) {
+              <p class="empty">No messages.</p>
+            } @else {
+              <ul class="message-list">
+                @for (m of validationResult()!.messages; track $index) {
+                  <li [class]="m.severity.toLowerCase()">
+                    <strong>{{ m.severity }}</strong> — {{ m.message }}
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
+
+        @if (testRunResult()) {
+          <div class="result-panel" [class.ok]="testRunResult()!.allPassed">
+            <h3>Test run: {{ testRunResult()!.allPassed ? 'all passed' : 'failures found' }}</h3>
+            @if (testRunResult()!.results.length === 0) {
+              <p class="empty">No saved test cases yet — add one below.</p>
+            }
+            @for (r of testRunResult()!.results; track r.testCaseId) {
+              <details class="test-result" [class.pass]="r.passed" [class.fail]="!r.passed">
+                <summary>
+                  {{ r.passed ? '✓' : '✗' }} {{ r.name }}
+                </summary>
+                <div class="test-result-body">
+                  <div class="outputs-compare">
+                    <div>
+                      <h4>Expected</h4>
+                      <pre>{{ r.expectedOutputs | json }}</pre>
+                    </div>
+                    <div>
+                      <h4>Actual</h4>
+                      <pre>{{ r.actualOutputs | json }}</pre>
+                    </div>
+                  </div>
+                  <h4>Trace</h4>
+                  <app-trace-view [trace]="r.trace" />
+                </div>
+              </details>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="card">
+        <h2>Test bench</h2>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Inputs</th><th>Expected</th></tr></thead>
+          <tbody>
+            @for (tc of testCases(); track tc.id) {
+              <tr>
+                <td>{{ tc.name }}</td>
+                <td><code>{{ tc.inputs | json }}</code></td>
+                <td><code>{{ tc.expectedOutputs | json }}</code></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="3" class="empty">No saved test cases yet.</td></tr>
+            }
+          </tbody>
+        </table>
+
+        <div class="new-test-case">
+          <label>
+            Name
+            <input type="text" [(ngModel)]="newTestCaseName" placeholder="e.g. Young applicant is reviewed" />
+          </label>
+          <label>
+            Inputs (JSON)
+            <textarea [(ngModel)]="newTestCaseInputsJson" rows="3"></textarea>
+          </label>
+          <label>
+            Expected outputs (JSON)
+            <textarea [(ngModel)]="newTestCaseExpectedJson" rows="2"></textarea>
+          </label>
+          @if (testCaseError()) {
+            <p class="empty error">{{ testCaseError() }}</p>
+          }
+          <button type="button" class="btn" (click)="addTestCase()">Save test case</button>
+        </div>
+      </div>
+    }
+
+    <div class="card">
+      <h2>Version diff and rollback</h2>
+      <div class="diff-toolbar">
+        <select [ngModel]="diffFromVersion()" (ngModelChange)="diffFromVersion.set($event)">
+          @for (v of versions(); track v.id) {
+            <option [value]="v.version">{{ v.version }}</option>
+          }
+        </select>
+        <span>→</span>
+        <select [ngModel]="diffToVersion()" (ngModelChange)="diffToVersion.set($event)">
+          @for (v of versions(); track v.id) {
+            <option [value]="v.version">{{ v.version }}</option>
+          }
+        </select>
+        <button type="button" class="btn" (click)="loadDiff()">Show diff</button>
+      </div>
+
+      @if (diffResult()) {
+        <ul class="diff-list">
+          @for (d of diffResult(); track d.decisionName) {
+            <li [class]="d.changeType.toLowerCase()">
+              <strong>{{ d.decisionName }}</strong> — {{ d.changeType }}
+              @if (d.ruleDiffs.length > 0) {
+                <ul>
+                  @for (rd of d.ruleDiffs; track rd.ruleId) {
+                    <li>
+                      {{ rd.changeType }}: <code>{{ rd.before }}</code> → <code>{{ rd.after }}</code>
+                    </li>
+                  }
+                </ul>
+              }
+            </li>
+          }
+        </ul>
+      }
+
+      <div class="rollback-row">
+        <select [(ngModel)]="rollbackToVersion">
+          <option value="">Rollback to…</option>
+          @for (v of versions(); track v.id) {
+            @if (v.status === 'PUBLISHED') {
+              <option [value]="v.version">{{ v.version }}</option>
+            }
+          }
+        </select>
+        <button type="button" class="btn danger" [disabled]="!rollbackToVersion" (click)="rollback()">
+          Republish this version
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Change history</h2>
+      <table class="data-table">
+        <thead><tr><th>When</th><th>Action</th><th>Actor</th></tr></thead>
+        <tbody>
+          @for (h of history(); track h.id) {
+            <tr>
+              <td>{{ h.at | date: 'short' }}</td>
+              <td>{{ h.action }}</td>
+              <td>{{ h.actor }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="3" class="empty">No changes yet.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

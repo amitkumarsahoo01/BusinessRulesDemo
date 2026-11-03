@@ -2,6 +2,8 @@ package com.dmnrules.decision.integration;
 
 import com.dmnrules.decision.api.dto.EvaluateResponseDto;
 import com.dmnrules.decision.audit.ExecutionDetail;
+import com.dmnrules.decision.auth.LoginRequest;
+import com.dmnrules.decision.auth.LoginResponse;
 import com.dmnrules.decision.model.ModelRegistry;
 import com.dmnrules.decision.model.ModelVersionRepository;
 import com.dmnrules.decision.model.ModelVersionRow;
@@ -161,6 +163,25 @@ class DecisionServiceIntegrationTest {
 
         await().atMost(Duration.ofSeconds(15)).untilAsserted(() ->
                 assertThat(response(modelKey, newVersion).getStatusCode()).isEqualTo(HttpStatus.OK));
+    }
+
+    @Test
+    void login_withCorrectPassword_returnsUserAndRole() {
+        ResponseEntity<LoginResponse> response = restTemplate.postForEntity(
+                "/api/auth/login", new LoginRequest("analyst", "demo"), LoginResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().username()).isEqualTo("analyst");
+        assertThat(response.getBody().role()).isEqualTo("rule-author");
+    }
+
+    @Test
+    void login_withWrongPassword_returns401ProblemJson() {
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "/api/auth/login", new LoginRequest("analyst", "wrong"), String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(response.getHeaders().getContentType().toString()).contains("application/problem+json");
     }
 
     private ResponseEntity<EvaluateResponseDto> response(String modelKey, String version) {
