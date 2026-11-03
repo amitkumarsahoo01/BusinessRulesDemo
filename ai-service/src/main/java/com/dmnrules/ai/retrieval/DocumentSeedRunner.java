@@ -23,12 +23,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Embeds policy documents and rule-row business-reason annotations into pgvector on first start
+ * Embeds policy documents and rule-row business-reason annotations into pgvector
  * (docs/Architecture.md "Retrieval for documentation"). Pulls rule annotations live from
  * decision-service's API rather than duplicating the seed DMN content here, so this stays correct
  * if the seed models ever change. Retries briefly since decision-service's own seeding can still
  * be in progress when this service starts (docker-compose only guarantees container start order,
  * not application readiness).
+ *
+ * <p>Follows the same {@code demo.seed.enabled} (RESET_DEMO_ON_START) reset-vs-bootstrap contract
+ * as decision-service's SeedRunner — see its javadoc.
  */
 @Component
 public class DocumentSeedRunner implements ApplicationRunner {
@@ -56,13 +59,18 @@ public class DocumentSeedRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (!enabled) {
-            log.info("Demo seeding disabled (demo.seed.enabled=false)");
-            return;
-        }
         Long existing = jdbcTemplate.queryForObject("SELECT count(*) FROM rule_doc_embedding", Long.class);
-        if (existing != null && existing > 0) {
-            log.info("Retrieval documents already embedded ({} rows), skipping", existing);
+        boolean hasData = existing != null && existing > 0;
+
+        if (enabled && hasData) {
+            // RESET_DEMO_ON_START=true: decision-service truncates and reissues new UUIDs for its
+            // rows on every restart too (SeedRunner), so embeddings referencing the old ones would
+            // be orphaned if left in place -- same "always come back clean" contract as M6 asks
+            // for on the decision-service side.
+            log.info("RESET_DEMO_ON_START=true: clearing previously embedded documents before re-embedding");
+            jdbcTemplate.execute("TRUNCATE TABLE rule_doc_embedding, ai_conversation");
+        } else if (!enabled && hasData) {
+            log.info("Retrieval documents already embedded ({} rows) and RESET_DEMO_ON_START=false, skipping", existing);
             return;
         }
 

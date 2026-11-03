@@ -30,10 +30,18 @@ import java.util.UUID;
 
 /**
  * Seeds demo users, the loan-eligibility and insurance-premium models, and ~300 historical
- * executions so the demo works the moment it starts (docs/BUILD_PLAN.md "Seed content"). Runs
- * once: skipped if dmn_model already has rows. The pgvector policy-document embeddings called for
- * in the full seed spec are deferred to M5, which is where ai-service's embedding model lives
- * (see docs/DECISIONS.md).
+ * executions so the demo works the moment it starts (docs/BUILD_PLAN.md "Seed content"). The
+ * pgvector policy-document embeddings called for in the full seed spec are deferred to M5, which
+ * is where ai-service's embedding model lives (see docs/DECISIONS.md).
+ *
+ * <p>{@code demo.seed.enabled} (from {@code RESET_DEMO_ON_START}, default true) controls two
+ * different things depending on its value: when true, every restart truncates and reseeds from
+ * scratch (BUILD_PLAN M6: "RESET_DEMO_ON_START=true reseeds data" — a public demo should always
+ * come back clean after a restart, however a visitor left it). When false, seeding only runs once
+ * on a genuinely empty database (first-run bootstrap) and never touches data again, so an operator
+ * who wants to preserve manual changes across restarts can turn reset off without losing the
+ * initial seed either. Truncating audit tables here is a deliberate, demo-only exception to
+ * CLAUDE.md rule 2 (INSERT/SELECT-only on audit tables) — see docs/DECISIONS.md.
  */
 @Component
 @Order(1)
@@ -66,13 +74,15 @@ public class SeedRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (!enabled) {
-            log.info("Demo seeding disabled (demo.seed.enabled=false)");
+        boolean hasData = modelVersionRepository.countModels() > 0;
+        if (enabled && hasData) {
+            log.info("RESET_DEMO_ON_START=true: clearing existing demo data before reseeding");
+            resetDemoData();
+        } else if (!enabled && hasData) {
+            log.info("Seed data already present and RESET_DEMO_ON_START=false, leaving it alone");
             return;
-        }
-        if (modelVersionRepository.countModels() > 0) {
-            log.info("Seed data already present, skipping");
-            return;
+        } else if (!enabled) {
+            log.info("Database is empty; seeding once even though RESET_DEMO_ON_START=false (first-run bootstrap)");
         }
 
         log.info("Seeding demo users, models and executions...");
@@ -82,6 +92,18 @@ public class SeedRunner implements ApplicationRunner {
         modelRegistry.reload();
         generateExecutions();
         log.info("Demo seeding complete");
+    }
+
+    private void resetDemoData() {
+        jdbcTemplate.execute(
+                """
+                TRUNCATE TABLE
+                    decision_trace_step, decision_execution,
+                    model_test_case, rule_change_audit,
+                    dmn_model_version, dmn_model,
+                    ai_interaction_audit, app_user
+                RESTART IDENTITY CASCADE
+                """);
     }
 
     private void seedUsers() {
