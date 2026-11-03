@@ -1,5 +1,6 @@
 server:
-  port: 8081
+  # See decision-service's application.yml for why this is parameterized (Cloud Run injects PORT).
+  port: ${PORT:8081}
 
 spring:
   application:

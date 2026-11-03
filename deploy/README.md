@@ -7,7 +7,7 @@ Two compose files live here:
   (postgres, decision-service, ai-service, frontend) is reachable only on the compose network.
   Caddy terminates HTTPS with an automatic Let's Encrypt certificate for `DEMO_DOMAIN` and reverse
   proxies to the frontend's nginx, which still does the internal `/api/...` routing and the AI
-  rate limit (`nginx/nginx.conf`).
+  rate limit (`nginx/nginx.conf.template`).
 
 ## Fresh VM steps
 
@@ -60,3 +60,18 @@ docker compose -f deploy/docker-compose.prod.yml logs -f decision-service ai-ser
 A `502`/`503` from Caddy right after `up` usually just means the Spring Boot services are still
 starting (Flyway migrate + seed + model registry load); `depends_on: service_started` doesn't wait
 for the app to be ready, only for the container to start.
+
+## Google Cloud Run
+
+`deploy/gcp/deploy.sh` deploys decision-service, ai-service and the nginx frontend as three Cloud
+Run services, backed by a private-IP Cloud SQL Postgres 16 (reached via Direct VPC egress) with
+secrets in Secret Manager.
+
+```
+export GCP_PROJECT=my-project ANTHROPIC_API_KEY=sk-ant-...   # key is only read on the first run
+gcloud auth login && deploy/gcp/deploy.sh
+```
+
+Notes: the services run with `RESET_DEMO_ON_START=false` (a reset on every cold start would wipe the
+database; an empty database is still seeded once), `max-instances=1`, and are unauthenticated, as the
+frontend proxies to them over their public URLs. Re-running the script ships new code.

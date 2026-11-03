@@ -1,5 +1,8 @@
 server:
-  port: 8080
+  # ${PORT} is injected by Cloud Run (always 8080 there in practice, but the platform owns the
+  # value, not us); the literal default keeps docker-compose/local behavior unchanged everywhere
+  # else since PORT is never set there.
+  port: ${PORT:8080}
 
 spring:
   application:

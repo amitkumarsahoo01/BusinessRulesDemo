@@ -1,0 +1,42 @@
+# Rendered by the stock nginx image's docker-entrypoint templating (/etc/nginx/templates/*.template
+# -> /etc/nginx/conf.d/*.conf via envsubst, restricted to names that are actually set as env vars,
+# so nginx's own $variables like $host/$remote_addr/$uri are left untouched). One template serves
+# every environment this app runs in -- only the env var *values* differ:
+#   - docker-compose.yml / docker-compose.prod.yml: frontend/Dockerfile bakes in defaults that
+#     reproduce the original hardcoded config (compose service DNS names, port 80) so neither
+#     compose file needs to set these at all.
+#   - Cloud Run: deploy/gcp/deploy.sh overrides all five with each service's real deployed URL
+#     and Cloud Run's injected PORT value.
+limit_req_zone $binary_remote_addr zone=ai_limit:10m rate=10r/m;
+
+server {
+    listen ${PORT};
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location /api/ai/ {
+        # Protects the AI endpoint (and the API key it spends) on a public demo: 10 requests/
+        # minute per client IP, with a small burst allowance for the chat UI's own retries/
+        # streaming reconnects.
+        limit_req zone=ai_limit burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass ${AI_SERVICE_URL}/api/ai/;
+        # Only takes effect when AI_SERVICE_URL is https:// (Cloud Run) -- sends correct SNI so
+        # the TLS handshake reaches the right Cloud Run revision instead of a default cert.
+        proxy_ssl_server_name on;
+        proxy_set_header Host ${AI_SERVICE_HOST};
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location /api/ {
+        proxy_pass ${DECISION_SERVICE_URL}/api/;
+        proxy_ssl_server_name on;
+        proxy_set_header Host ${DECISION_SERVICE_HOST};
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
