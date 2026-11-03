@@ -4,6 +4,16 @@ server:
 spring:
   application:
     name: decision-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/dmn_rules}
+    username: ${SPRING_DATASOURCE_USERNAME:dmn_rules}
+    password: ${SPRING_DATASOURCE_PASSWORD:dmn_rules}
+  flyway:
+    enabled: true
+
+demo:
+  seed:
+    enabled: ${RESET_DEMO_ON_START:true}
 
 management:
   endpoints:

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20240513/MODEL/"
+             xmlns:feel="https://www.omg.org/spec/DMN/20240513/FEEL/"
+             id="insurance-premium" name="Insurance Premium"
+             namespace="https://dmn-rules-demo/insurance-premium"
+             exporter="dmn-rules-demo" exporterVersion="1.0.0">
+
+  <itemDefinition id="tDriver" name="tDriver">
+    <itemComponent id="tDriver_age" name="age"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tDriver_yearsLicensed" name="yearsLicensed"><typeRef>number</typeRef></itemComponent>
+  </itemDefinition>
+
+  <itemDefinition id="tVehicle" name="tVehicle">
+    <itemComponent id="tVehicle_value" name="value"><typeRef>number</typeRef></itemComponent>
+  </itemDefinition>
+
+  <inputData id="InputData_Driver" name="Driver">
+    <variable id="InputData_Driver_var" name="Driver" typeRef="tDriver"/>
+  </inputData>
+
+  <inputData id="InputData_Vehicle" name="Vehicle">
+    <variable id="InputData_Vehicle_var" name="Vehicle" typeRef="tVehicle"/>
+  </inputData>
+
+  <decision id="Decision_PremiumTier" name="Premium Tier">
+    <variable id="Decision_PremiumTier_var" name="Premium Tier" typeRef="string"/>
+    <informationRequirement id="ir1"><requiredInput href="#InputData_Driver"/></informationRequirement>
+    <informationRequirement id="ir2"><requiredInput href="#InputData_Vehicle"/></informationRequirement>
+    <decisionTable id="Decision_PremiumTier_dt" hitPolicy="FIRST">
+      <input id="in1" label="Driver Age">
+        <inputExpression id="in1_expr" typeRef="number"><text>Driver.age</text></inputExpression>
+      </input>
+      <input id="in2" label="Years Licensed">
+        <inputExpression id="in2_expr" typeRef="number"><text>Driver.yearsLicensed</text></inputExpression>
+      </input>
+      <input id="in3" label="Vehicle Value">
+        <inputExpression id="in3_expr" typeRef="number"><text>Vehicle.value</text></inputExpression>
+      </input>
+      <output id="out1" label="Premium Tier" typeRef="string"/>
+      <rule id="rule1">
+        <description>Younger drivers are statistically higher risk.</description>
+        <inputEntry id="rule1_in1"><text>&lt;25</text></inputEntry>
+        <inputEntry id="rule1_in2"><text>-</text></inputEntry>
+        <inputEntry id="rule1_in3"><text>-</text></inputEntry>
+        <outputEntry id="rule1_out1"><text>"HIGH_RISK"</text></outputEntry>
+      </rule>
+      <rule id="rule2">
+        <description>Newer drivers (under 2 years licensed) are higher risk regardless of age.</description>
+        <inputEntry id="rule2_in1"><text>-</text></inputEntry>
+        <inputEntry id="rule2_in2"><text>&lt;2</text></inputEntry>
+        <inputEntry id="rule2_in3"><text>-</text></inputEntry>
+        <outputEntry id="rule2_out1"><text>"HIGH_RISK"</text></outputEntry>
+      </rule>
+      <rule id="rule3">
+        <description>High-value vehicles cost more to repair or replace.</description>
+        <inputEntry id="rule3_in1"><text>-</text></inputEntry>
+        <inputEntry id="rule3_in2"><text>-</text></inputEntry>
+        <inputEntry id="rule3_in3"><text>&gt;=60000</text></inputEntry>
+        <outputEntry id="rule3_out1"><text>"HIGH_RISK"</text></outputEntry>
+      </rule>
+      <rule id="rule4">
+        <description>Everyone else gets the standard tier.</description>
+        <inputEntry id="rule4_in1"><text>-</text></inputEntry>
+        <inputEntry id="rule4_in2"><text>-</text></inputEntry>
+        <inputEntry id="rule4_in3"><text>-</text></inputEntry>
+        <outputEntry id="rule4_out1"><text>"STANDARD"</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+</definitions>

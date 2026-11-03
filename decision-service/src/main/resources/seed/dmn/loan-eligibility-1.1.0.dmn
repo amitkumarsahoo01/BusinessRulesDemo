@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20240513/MODEL/"
+             xmlns:feel="https://www.omg.org/spec/DMN/20240513/FEEL/"
+             id="loan-eligibility" name="Loan Eligibility"
+             namespace="https://dmn-rules-demo/loan-eligibility"
+             exporter="dmn-rules-demo" exporterVersion="1.1.0">
+
+  <itemDefinition id="tApplicant" name="tApplicant">
+    <itemComponent id="tApplicant_age" name="age"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tApplicant_creditScore" name="creditScore"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tApplicant_income" name="income"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tApplicant_employmentYears" name="employmentYears"><typeRef>number</typeRef></itemComponent>
+  </itemDefinition>
+
+  <itemDefinition id="tLoan" name="tLoan">
+    <itemComponent id="tLoan_amount" name="amount"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tLoan_termMonths" name="termMonths"><typeRef>number</typeRef></itemComponent>
+  </itemDefinition>
+
+  <inputData id="InputData_Applicant" name="Applicant">
+    <variable id="InputData_Applicant_var" name="Applicant" typeRef="tApplicant"/>
+  </inputData>
+
+  <inputData id="InputData_Loan" name="Loan">
+    <variable id="InputData_Loan_var" name="Loan" typeRef="tLoan"/>
+  </inputData>
+
+  <decision id="Decision_DebtRatio" name="Debt Ratio">
+    <variable id="Decision_DebtRatio_var" name="Debt Ratio" typeRef="number"/>
+    <informationRequirement id="ir1"><requiredInput href="#InputData_Applicant"/></informationRequirement>
+    <informationRequirement id="ir2"><requiredInput href="#InputData_Loan"/></informationRequirement>
+    <literalExpression id="Decision_DebtRatio_expr">
+      <text>(Loan.amount/Loan.termMonths)/(Applicant.income/12)</text>
+    </literalExpression>
+  </decision>
+
+  <decision id="Decision_RiskCategory" name="Risk Category">
+    <variable id="Decision_RiskCategory_var" name="Risk Category" typeRef="string"/>
+    <informationRequirement id="ir3"><requiredInput href="#InputData_Applicant"/></informationRequirement>
+    <informationRequirement id="ir4"><requiredDecision href="#Decision_DebtRatio"/></informationRequirement>
+    <decisionTable id="Decision_RiskCategory_dt" hitPolicy="UNIQUE">
+      <input id="in1" label="Credit Score">
+        <inputExpression id="in1_expr" typeRef="number"><text>Applicant.creditScore</text></inputExpression>
+      </input>
+      <input id="in2" label="Debt Ratio">
+        <inputExpression id="in2_expr" typeRef="number"><text>Debt Ratio</text></inputExpression>
+      </input>
+      <output id="out1" label="Risk Category" typeRef="string"/>
+      <rule id="rule1">
+        <description>Strong credit and a low debt load are low risk. 1.1.0 raised the low-risk bar from 700 to 720.</description>
+        <inputEntry id="rule1_in1"><text>&gt;=720</text></inputEntry>
+        <inputEntry id="rule1_in2"><text>&lt;0.35</text></inputEntry>
+        <outputEntry id="rule1_out1"><text>"LOW"</text></outputEntry>
+      </rule>
+      <rule id="rule2">
+        <description>Strong credit but a heavier debt load moves to medium risk.</description>
+        <inputEntry id="rule2_in1"><text>&gt;=720</text></inputEntry>
+        <inputEntry id="rule2_in2"><text>&gt;=0.35</text></inputEntry>
+        <outputEntry id="rule2_out1"><text>"MEDIUM"</text></outputEntry>
+      </rule>
+      <rule id="rule3">
+        <description>Fair credit with a manageable debt load is medium risk. 1.1.0 raised the fair-credit floor from 620 to 640.</description>
+        <inputEntry id="rule3_in1"><text>[640..720)</text></inputEntry>
+        <inputEntry id="rule3_in2"><text>&lt;0.35</text></inputEntry>
+        <outputEntry id="rule3_out1"><text>"MEDIUM"</text></outputEntry>
+      </rule>
+      <rule id="rule4">
+        <description>Fair credit combined with a heavy debt load is high risk.</description>
+        <inputEntry id="rule4_in1"><text>[640..720)</text></inputEntry>
+        <inputEntry id="rule4_in2"><text>&gt;=0.35</text></inputEntry>
+        <outputEntry id="rule4_out1"><text>"HIGH"</text></outputEntry>
+      </rule>
+      <rule id="rule5">
+        <description>Weak credit is always high risk, regardless of debt load. 1.1.0 tightened this from below 620 to below 640.</description>
+        <inputEntry id="rule5_in1"><text>&lt;640</text></inputEntry>
+        <inputEntry id="rule5_in2"><text>-</text></inputEntry>
+        <outputEntry id="rule5_out1"><text>"HIGH"</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+  <decision id="Decision_Eligibility" name="Eligibility">
+    <variable id="Decision_Eligibility_var" name="Eligibility" typeRef="string"/>
+    <informationRequirement id="ir5"><requiredInput href="#InputData_Applicant"/></informationRequirement>
+    <informationRequirement id="ir6"><requiredDecision href="#Decision_RiskCategory"/></informationRequirement>
+    <decisionTable id="Decision_Eligibility_dt" hitPolicy="FIRST">
+      <input id="ein1" label="Age">
+        <inputExpression id="ein1_expr" typeRef="number"><text>Applicant.age</text></inputExpression>
+      </input>
+      <input id="ein2" label="Employment Years">
+        <inputExpression id="ein2_expr" typeRef="number"><text>Applicant.employmentYears</text></inputExpression>
+      </input>
+      <input id="ein3" label="Risk Category">
+        <inputExpression id="ein3_expr" typeRef="string"><text>Risk Category</text></inputExpression>
+      </input>
+      <output id="eout1" label="Eligibility" typeRef="string"/>
+      <rule id="erule1">
+        <description>Applicants under 21 always get a manual review, regardless of risk.</description>
+        <inputEntry id="erule1_in1"><text>&lt;21</text></inputEntry>
+        <inputEntry id="erule1_in2"><text>-</text></inputEntry>
+        <inputEntry id="erule1_in3"><text>-</text></inputEntry>
+        <outputEntry id="erule1_out1"><text>"REVIEW"</text></outputEntry>
+      </rule>
+      <rule id="erule2">
+        <description>High risk applicants are declined.</description>
+        <inputEntry id="erule2_in1"><text>-</text></inputEntry>
+        <inputEntry id="erule2_in2"><text>-</text></inputEntry>
+        <inputEntry id="erule2_in3"><text>"HIGH"</text></inputEntry>
+        <outputEntry id="erule2_out1"><text>"DECLINED"</text></outputEntry>
+      </rule>
+      <rule id="erule3">
+        <description>Medium risk with under a year on the job needs manual review.</description>
+        <inputEntry id="erule3_in1"><text>-</text></inputEntry>
+        <inputEntry id="erule3_in2"><text>&lt;1</text></inputEntry>
+        <inputEntry id="erule3_in3"><text>"MEDIUM"</text></inputEntry>
+        <outputEntry id="erule3_out1"><text>"REVIEW"</text></outputEntry>
+      </rule>
+      <rule id="erule4">
+        <description>Medium risk with at least a year on the job is approved.</description>
+        <inputEntry id="erule4_in1"><text>-</text></inputEntry>
+        <inputEntry id="erule4_in2"><text>-</text></inputEntry>
+        <inputEntry id="erule4_in3"><text>"MEDIUM"</text></inputEntry>
+        <outputEntry id="erule4_out1"><text>"APPROVED"</text></outputEntry>
+      </rule>
+      <rule id="erule5">
+        <description>Low risk applicants are approved.</description>
+        <inputEntry id="erule5_in1"><text>-</text></inputEntry>
+        <inputEntry id="erule5_in2"><text>-</text></inputEntry>
+        <inputEntry id="erule5_in3"><text>"LOW"</text></inputEntry>
+        <outputEntry id="erule5_out1"><text>"APPROVED"</text></outputEntry>
+      </rule>
+      <rule id="erule6">
+        <description>Safety net: anything unmatched goes to manual review.</description>
+        <inputEntry id="erule6_in1"><text>-</text></inputEntry>
+        <inputEntry id="erule6_in2"><text>-</text></inputEntry>
+        <inputEntry id="erule6_in3"><text>-</text></inputEntry>
+        <outputEntry id="erule6_out1"><text>"REVIEW"</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+</definitions>

@@ -37,14 +37,15 @@ Demo users (password `demo` for all, shown on login page):
   - Verified: `./mvnw test` passes for decision-service and ai-service; `npm run build` and `npm test` pass for frontend; `docker compose -f deploy/docker-compose.yml up --build` brings up postgres (pgvector, healthy), decision-service, ai-service and nginx/frontend — `curl http://localhost/` returns the Angular shell and `curl http://localhost/api/health` (proxied through nginx) returns `{"status":"UP","service":"decision-service"}`.
 
 ### M2 — Decision core + audit
-- [ ] Flyway schema: dmn_model, dmn_model_version, decision_execution (with row_hash),
+- [x] Flyway schema: dmn_model, dmn_model_version, decision_execution (with row_hash),
       decision_trace_step, rule_change_audit, ai_interaction_audit, demo users.
-- [ ] Model registry: compile published versions from DB with `DMNRuntimeBuilder`; reload on publish (LISTEN/NOTIFY).
-- [ ] `DMNRuntimeEventListener` capturing ordered trace incl. matched decision-table rows.
-- [ ] `POST /api/decisions/{modelKey}/evaluate` (+ `?version=`), `POST .../simulate` (not audited).
-- [ ] `GET /api/executions` (filters, paging), `GET /api/executions/{id}`.
-- [ ] Seed loader + execution generator.
+- [x] Model registry: compile published versions from DB with `DMNRuntimeBuilder`; reload on publish (LISTEN/NOTIFY).
+- [x] `DMNRuntimeEventListener` capturing ordered trace incl. matched decision-table rows.
+- [x] `POST /api/decisions/{modelKey}/evaluate` (+ `?version=`), `POST .../simulate` (not audited).
+- [x] `GET /api/executions` (filters, paging), `GET /api/executions/{id}`.
+- [x] Seed loader + execution generator.
 - Accept: evaluating loan-eligibility returns outputs + executionId; trace shows matched row numbers; integration test with Testcontainers.
+  - Verified: `DecisionServiceIntegrationTest` (Testcontainers Postgres) — evaluate returns outputs + executionId, trace shows 1-indexed matched rows, GET /api/executions/{id} round-trips, simulate writes nothing, unknown model returns 404 problem+json, and a directly-inserted version + `pg_notify('model_published', ...)` hot-swaps into the registry within 15s with no restart. `DmnSeedFixturesTest` validates all 4 seed DMN files compile/evaluate correctly (incl. the 1.0.0→1.1.0 threshold-tightening behavior change). Also exercised live via `docker compose up --build`: evaluate through nginx returns correct outputs/trace. Scoping notes (insurance-premium + pgvector docs deferred to M5, auth is schema-only, simulate is published-version-only for now) are in docs/DECISIONS.md.
 
 ### M3 — Rule authoring lifecycle
 - [ ] Draft CRUD from guided-table JSON ↔ DMN XML (round-trip tested).
