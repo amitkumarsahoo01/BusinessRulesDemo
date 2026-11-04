@@ -1,0 +1,31 @@
+{
+  "Applicant": {
+    "fullName": "Dana Whitfield",
+    "age": 38,
+    "creditScore": 720,
+    "address": { "street": "12 Elm Street", "city": "Austin", "country": "US", "postCode": "73301" },
+    "employment": {
+      "employer": "Acme Corp",
+      "yearsEmployed": 5,
+      "contract": "permanent",
+      "employerAddress": { "street": "1 Main Plaza", "city": "Austin", "country": "US", "postCode": "73344" }
+    },
+    "incomes": [
+      { "source": "salary", "monthlyAmount": 6000, "verified": true },
+      { "source": "bonus", "monthlyAmount": 1000, "verified": true },
+      { "source": "rental", "monthlyAmount": 800, "verified": false }
+    ]
+  },
+  "Liabilities": [
+    { "lender": "Auto Finance Co", "type": "car-loan", "monthlyPayment": 350, "balance": 12000 },
+    { "lender": "Bank X", "type": "credit-card", "monthlyPayment": 150, "balance": 12500 }
+  ],
+  "Loan Request": {
+    "amount": 300000,
+    "termMonths": 360,
+    "property": {
+      "value": 400000,
+      "address": { "street": "88 Oak Avenue", "city": "Austin", "country": "US", "postCode": "73312" }
+    }
+  }
+}

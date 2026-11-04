@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Complex sample for the "Import a DMN file" panel (Rules page).
+
+  Shows:
+    * Nested data types up to four levels deep (Loan Request > property > address > postCode),
+      lists of structures (incomes, liabilities) and allowed-value enumerations.
+    * A requirements graph (DRG): 3 inputs -> 11 chained decisions, a business knowledge model
+      (annuity payment) and a knowledge source.
+    * FEEL: `for ... return` loops, list filters, sum/count/concatenate, if/else, a context
+      literal that returns a structured result, and a decision table with range tests.
+
+  Try it with the inputs in mortgage-assessment.sample-input.json (expected outcome: REFER).
+-->
+<definitions xmlns="https://www.omg.org/spec/DMN/20240513/MODEL/"
+             id="mortgage-assessment" name="Mortgage Assessment"
+             namespace="https://example.org/mortgage-assessment">
+
+  <!-- ===== Data types ===== -->
+
+  <itemDefinition id="tAddress" name="tAddress">
+    <itemComponent id="tAddress_street" name="street"><typeRef>string</typeRef></itemComponent>
+    <itemComponent id="tAddress_city" name="city"><typeRef>string</typeRef></itemComponent>
+    <itemComponent id="tAddress_country" name="country">
+      <typeRef>string</typeRef>
+      <allowedValues><text>"US","CA","UK"</text></allowedValues>
+    </itemComponent>
+    <itemComponent id="tAddress_postCode" name="postCode"><typeRef>string</typeRef></itemComponent>
+  </itemDefinition>
+
+  <itemDefinition id="tIncome" name="tIncome">
+    <itemComponent id="tIncome_source" name="source">
+      <typeRef>string</typeRef>
+      <allowedValues><text>"salary","bonus","rental","freelance"</text></allowedValues>
+    </itemComponent>
+    <itemComponent id="tIncome_amount" name="monthlyAmount"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tIncome_verified" name="verified"><typeRef>boolean</typeRef></itemComponent>
+  </itemDefinition>
+
+  <itemDefinition id="tIncomeList" name="tIncomeList" isCollection="true">
+    <typeRef>tIncome</typeRef>
+  </itemDefinition>
+
+  <itemDefinition id="tLiability" name="tLiability">
+    <itemComponent id="tLiability_lender" name="lender"><typeRef>string</typeRef></itemComponent>
+    <itemComponent id="tLiability_type" name="type">
+      <typeRef>string</typeRef>
+      <allowedValues><text>"credit-card","car-loan","student-loan","other"</text></allowedValues>
+    </itemComponent>
+    <itemComponent id="tLiability_payment" name="monthlyPayment"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tLiability_balance" name="balance"><typeRef>number</typeRef></itemComponent>
+  </itemDefinition>
+
+  <itemDefinition id="tLiabilityList" name="tLiabilityList" isCollection="true">
+    <typeRef>tLiability</typeRef>
+  </itemDefinition>
+
+  <itemDefinition id="tFlagList" name="tFlagList" isCollection="true">
+    <typeRef>string</typeRef>
+  </itemDefinition>
+
+  <itemDefinition id="tApplicant" name="tApplicant">
+    <itemComponent id="tApplicant_name" name="fullName"><typeRef>string</typeRef></itemComponent>
+    <itemComponent id="tApplicant_age" name="age"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tApplicant_score" name="creditScore"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tApplicant_address" name="address"><typeRef>tAddress</typeRef></itemComponent>
+    <itemComponent id="tApplicant_employment" name="employment">
+      <itemComponent id="tEmp_employer" name="employer"><typeRef>string</typeRef></itemComponent>
+      <itemComponent id="tEmp_years" name="yearsEmployed"><typeRef>number</typeRef></itemComponent>
+      <itemComponent id="tEmp_contract" name="contract">
+        <typeRef>string</typeRef>
+        <allowedValues><text>"permanent","contract","self-employed"</text></allowedValues>
+      </itemComponent>
+      <itemComponent id="tEmp_address" name="employerAddress"><typeRef>tAddress</typeRef></itemComponent>
+    </itemComponent>
+    <itemComponent id="tApplicant_incomes" name="incomes"><typeRef>tIncomeList</typeRef></itemComponent>
+  </itemDefinition>
+
+  <itemDefinition id="tProperty" name="tProperty">
+    <itemComponent id="tProperty_value" name="value"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tProperty_address" name="address"><typeRef>tAddress</typeRef></itemComponent>
+  </itemDefinition>
+
+  <itemDefinition id="tLoanRequest" name="tLoanRequest">
+    <itemComponent id="tLoan_amount" name="amount"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tLoan_term" name="termMonths"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tLoan_property" name="property"><typeRef>tProperty</typeRef></itemComponent>
+  </itemDefinition>
+
+  <itemDefinition id="tAssessment" name="tAssessment">
+    <itemComponent id="tAssessment_outcome" name="outcome">
+      <typeRef>string</typeRef>
+      <allowedValues><text>"APPROVED","REFER","DECLINED"</text></allowedValues>
+    </itemComponent>
+    <itemComponent id="tAssessment_rate" name="rate"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tAssessment_payment" name="monthlyPayment"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tAssessment_dti" name="debtToIncome"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="tAssessment_flags" name="flags"><typeRef>tFlagList</typeRef></itemComponent>
+  </itemDefinition>
+
+  <!-- ===== Inputs ===== -->
+
+  <inputData id="in_applicant" name="Applicant">
+    <variable id="in_applicant_v" name="Applicant" typeRef="tApplicant"/>
+  </inputData>
+  <inputData id="in_liabilities" name="Liabilities">
+    <variable id="in_liabilities_v" name="Liabilities" typeRef="tLiabilityList"/>
+  </inputData>
+  <inputData id="in_loan" name="Loan Request">
+    <variable id="in_loan_v" name="Loan Request" typeRef="tLoanRequest"/>
+  </inputData>
+
+  <!-- ===== Business knowledge: standard annuity payment ===== -->
+
+  <businessKnowledgeModel id="bkm_payment" name="Monthly Payment">
+    <variable id="bkm_payment_v" name="Monthly Payment"/>
+    <encapsulatedLogic id="bkm_payment_fn">
+      <formalParameter id="bkm_p1" name="amount" typeRef="number"/>
+      <formalParameter id="bkm_p2" name="termMonths" typeRef="number"/>
+      <formalParameter id="bkm_p3" name="annualRate" typeRef="number"/>
+      <literalExpression id="bkm_payment_le">
+        <text>if annualRate = 0 then amount / termMonths else amount * (annualRate / 12) / (1 - 1 / ((1 + annualRate / 12) ** termMonths))</text>
+      </literalExpression>
+    </encapsulatedLogic>
+  </businessKnowledgeModel>
+
+  <!-- ===== Decisions ===== -->
+
+  <!-- FOR loop: bonuses count at half value, unverified income does not count. -->
+  <decision id="dec_income" name="Verified Monthly Income">
+    <variable id="dec_income_v" name="Verified Monthly Income" typeRef="number"/>
+    <informationRequirement id="ir_inc1"><requiredInput href="#in_applicant"/></informationRequirement>
+    <literalExpression id="dec_income_le">
+      <text>sum(for i in Applicant.incomes return if i.verified then (if i.source = "bonus" then i.monthlyAmount * 0.5 else i.monthlyAmount) else 0)</text>
+    </literalExpression>
+  </decision>
+
+  <decision id="dec_liabilities" name="Monthly Liabilities">
+    <variable id="dec_liabilities_v" name="Monthly Liabilities" typeRef="number"/>
+    <informationRequirement id="ir_lia1"><requiredInput href="#in_liabilities"/></informationRequirement>
+    <literalExpression id="dec_liabilities_le">
+      <text>sum(for l in Liabilities return l.monthlyPayment)</text>
+    </literalExpression>
+  </decision>
+
+  <decision id="dec_ltv" name="Loan To Value">
+    <variable id="dec_ltv_v" name="Loan To Value" typeRef="number"/>
+    <informationRequirement id="ir_ltv1"><requiredInput href="#in_loan"/></informationRequirement>
+    <literalExpression id="dec_ltv_le">
+      <text>Loan Request.amount / Loan Request.property.value</text>
+    </literalExpression>
+  </decision>
+
+  <decision id="dec_rate" name="Interest Rate">
+    <variable id="dec_rate_v" name="Interest Rate" typeRef="number"/>
+    <informationRequirement id="ir_rate1"><requiredInput href="#in_applicant"/></informationRequirement>
+    <informationRequirement id="ir_rate2"><requiredDecision href="#dec_ltv"/></informationRequirement>
+    <decisionTable id="dt_rate" hitPolicy="UNIQUE">
+      <input id="dt_rate_in1" label="Credit score">
+        <inputExpression id="dt_rate_in1_e" typeRef="number"><text>Applicant.creditScore</text></inputExpression>
+      </input>
+      <input id="dt_rate_in2" label="Loan to value">
+        <inputExpression id="dt_rate_in2_e" typeRef="number"><text>Loan To Value</text></inputExpression>
+      </input>
+      <output id="dt_rate_out" label="Annual rate"/>
+      <rule id="rt1">
+        <description>Excellent credit, low LTV</description>
+        <inputEntry id="rt1_i1"><text>&gt;= 760</text></inputEntry>
+        <inputEntry id="rt1_i2"><text>&lt;= 0.8</text></inputEntry>
+        <outputEntry id="rt1_o"><text>0.045</text></outputEntry>
+      </rule>
+      <rule id="rt2">
+        <description>Excellent credit, high LTV</description>
+        <inputEntry id="rt2_i1"><text>&gt;= 760</text></inputEntry>
+        <inputEntry id="rt2_i2"><text>&gt; 0.8</text></inputEntry>
+        <outputEntry id="rt2_o"><text>0.05</text></outputEntry>
+      </rule>
+      <rule id="rt3">
+        <description>Good credit, low LTV</description>
+        <inputEntry id="rt3_i1"><text>[680..760)</text></inputEntry>
+        <inputEntry id="rt3_i2"><text>&lt;= 0.8</text></inputEntry>
+        <outputEntry id="rt3_o"><text>0.052</text></outputEntry>
+      </rule>
+      <rule id="rt4">
+        <description>Good credit, high LTV</description>
+        <inputEntry id="rt4_i1"><text>[680..760)</text></inputEntry>
+        <inputEntry id="rt4_i2"><text>&gt; 0.8</text></inputEntry>
+        <outputEntry id="rt4_o"><text>0.058</text></outputEntry>
+      </rule>
+      <rule id="rt5">
+        <description>Fair credit, low LTV</description>
+        <inputEntry id="rt5_i1"><text>&lt; 680</text></inputEntry>
+        <inputEntry id="rt5_i2"><text>&lt;= 0.8</text></inputEntry>
+        <outputEntry id="rt5_o"><text>0.065</text></outputEntry>
+      </rule>
+      <rule id="rt6">
+        <description>Fair credit, high LTV</description>
+        <inputEntry id="rt6_i1"><text>&lt; 680</text></inputEntry>
+        <inputEntry id="rt6_i2"><text>&gt; 0.8</text></inputEntry>
+        <outputEntry id="rt6_o"><text>0.075</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+  <decision id="dec_payment" name="Estimated Payment">
+    <variable id="dec_payment_v" name="Estimated Payment" typeRef="number"/>
+    <informationRequirement id="ir_pay1"><requiredInput href="#in_loan"/></informationRequirement>
+    <informationRequirement id="ir_pay2"><requiredDecision href="#dec_rate"/></informationRequirement>
+    <knowledgeRequirement id="kr_pay1"><requiredKnowledge href="#bkm_payment"/></knowledgeRequirement>
+    <literalExpression id="dec_payment_le">
+      <text>Monthly Payment(Loan Request.amount, Loan Request.termMonths, Interest Rate)</text>
+    </literalExpression>
+  </decision>
+
+  <decision id="dec_dti" name="Debt To Income">
+    <variable id="dec_dti_v" name="Debt To Income" typeRef="number"/>
+    <informationRequirement id="ir_dti1"><requiredDecision href="#dec_income"/></informationRequirement>
+    <informationRequirement id="ir_dti2"><requiredDecision href="#dec_liabilities"/></informationRequirement>
+    <informationRequirement id="ir_dti3"><requiredDecision href="#dec_payment"/></informationRequirement>
+    <literalExpression id="dec_dti_le">
+      <text>if Verified Monthly Income = 0 then 1 else (Monthly Liabilities + Estimated Payment) / Verified Monthly Income</text>
+    </literalExpression>
+  </decision>
+
+  <!-- FOR loops over filtered lists. Each loop is its own decision (see Red Flags below). -->
+  <decision id="dec_card_flags" name="Credit Card Flags">
+    <variable id="dec_card_flags_v" name="Credit Card Flags" typeRef="tFlagList"/>
+    <informationRequirement id="ir_cf1"><requiredInput href="#in_liabilities"/></informationRequirement>
+    <literalExpression id="dec_card_flags_le">
+      <text>for l in Liabilities[type = "credit-card" and balance &gt; 10000] return "High credit-card balance with " + l.lender</text>
+    </literalExpression>
+  </decision>
+
+  <decision id="dec_income_flags" name="Income Flags">
+    <variable id="dec_income_flags_v" name="Income Flags" typeRef="tFlagList"/>
+    <informationRequirement id="ir_if1"><requiredInput href="#in_applicant"/></informationRequirement>
+    <literalExpression id="dec_income_flags_le">
+      <text>for i in Applicant.incomes[verified = false] return "Unverified " + i.source + " income"</text>
+    </literalExpression>
+  </decision>
+
+  <decision id="dec_profile_flags" name="Profile Flags">
+    <variable id="dec_profile_flags_v" name="Profile Flags" typeRef="tFlagList"/>
+    <informationRequirement id="ir_pf1"><requiredInput href="#in_applicant"/></informationRequirement>
+    <informationRequirement id="ir_pf2"><requiredInput href="#in_loan"/></informationRequirement>
+    <literalExpression id="dec_profile_flags_le">
+      <text>concatenate(
+  (if Applicant.employment.yearsEmployed &lt; 2 then ["Short employment history"] else []),
+  (if not(Loan Request.property.address.country = Applicant.address.country) then ["Property is in a different country"] else [])
+)</text>
+    </literalExpression>
+  </decision>
+
+  <decision id="dec_flags" name="Red Flags">
+    <variable id="dec_flags_v" name="Red Flags" typeRef="tFlagList"/>
+    <informationRequirement id="ir_fl1"><requiredDecision href="#dec_card_flags"/></informationRequirement>
+    <informationRequirement id="ir_fl2"><requiredDecision href="#dec_income_flags"/></informationRequirement>
+    <informationRequirement id="ir_fl3"><requiredDecision href="#dec_profile_flags"/></informationRequirement>
+    <literalExpression id="dec_flags_le">
+      <text>concatenate(Credit Card Flags, Income Flags, Profile Flags)</text>
+    </literalExpression>
+  </decision>
+
+  <!-- Returns a structured result (a context), not a single value. -->
+  <decision id="dec_assessment" name="Assessment">
+    <variable id="dec_assessment_v" name="Assessment" typeRef="tAssessment"/>
+    <informationRequirement id="ir_as1"><requiredDecision href="#dec_ltv"/></informationRequirement>
+    <informationRequirement id="ir_as2"><requiredDecision href="#dec_dti"/></informationRequirement>
+    <informationRequirement id="ir_as3"><requiredDecision href="#dec_flags"/></informationRequirement>
+    <informationRequirement id="ir_as4"><requiredDecision href="#dec_rate"/></informationRequirement>
+    <informationRequirement id="ir_as5"><requiredDecision href="#dec_payment"/></informationRequirement>
+    <literalExpression id="dec_assessment_le">
+      <text>{
+  outcome: if Loan To Value &gt; 0.95 or Debt To Income &gt; 0.5 then "DECLINED"
+           else if Debt To Income &gt; 0.36 or count(Red Flags) &gt; 0 then "REFER"
+           else "APPROVED",
+  rate: Interest Rate,
+  monthlyPayment: Estimated Payment,
+  debtToIncome: Debt To Income,
+  flags: Red Flags
+}</text>
+    </literalExpression>
+  </decision>
+
+  <knowledgeSource id="ks_policy" name="Lending Policy">
+    <authorityRequirement id="ar_policy"><requiredDecision href="#dec_assessment"/></authorityRequirement>
+  </knowledgeSource>
+</definitions>
