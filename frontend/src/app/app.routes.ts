@@ -28,6 +28,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/audit/execution-search').then((m) => m.ExecutionSearch),
   },
   {
+    path: 'help',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/help/help-page').then((m) => m.HelpPage),
+  },
+  {
     path: 'audit/:id',
     canActivate: [authGuard],
     loadComponent: () => import('./features/audit/execution-detail').then((m) => m.ExecutionDetailPage),

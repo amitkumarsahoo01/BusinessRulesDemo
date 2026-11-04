@@ -1,0 +1,145 @@
+.intro {
+  margin: 0 0 0.75rem;
+  color: var(--color-muted);
+}
+
+.lifecycle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .arrow {
+    color: var(--color-muted);
+  }
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #f3f4f6;
+  color: #374151;
+
+  &.draft {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  &.published {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  &.approved,
+  &.tested,
+  &.validated {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+}
+
+.role-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.role-tab {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+  }
+
+  .you {
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.4rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #92400e;
+  }
+}
+
+.guide .summary {
+  margin: 0 0 1rem;
+  color: var(--color-muted);
+}
+
+.steps {
+  list-style: none;
+  counter-reset: step;
+  padding: 0;
+  margin: 0;
+}
+
+.step {
+  counter-increment: step;
+  position: relative;
+  padding: 0 0 1rem 2.4rem;
+
+  &::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: #eef2ff;
+    color: var(--color-primary);
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  h3 {
+    margin: 0 0 0.1rem;
+    font-size: 0.95rem;
+  }
+
+  p {
+    margin: 0.1rem 0;
+    font-size: 0.85rem;
+  }
+
+  .where {
+    font-weight: 600;
+    color: var(--color-primary);
+    font-size: 0.78rem;
+  }
+}
+
+.limits-title {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.9rem;
+}
+
+.limits {
+  margin: 0 0 0.75rem;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
+}

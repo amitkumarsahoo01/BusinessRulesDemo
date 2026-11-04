@@ -105,6 +105,11 @@ Demo users (password `demo` for all, shown on login page):
 - Accept: import a .dmn from the UI -> see its structure -> validate/test/approve/publish -> evaluate.
   - Verified locally on Docker Desktop (compose stack) in the browser: uploading a DMN with a BKM, formula decision and knowledge source created a draft and opened its diagram; seed model shows tables with hit policy and row counts. `DmnImportIntegrationTest` drives an imported model all the way to a live evaluation. Bug found and fixed on the way: the trace snapshot included BKM function objects, which broke JSON serialization of test runs/audit traces for any model with a BKM. Known limits: roles are not enforced server-side (as elsewhere in this demo, X-User is trusted); the guided editor reads only the first output column of a table; imported models are not added to the AI retrieval index (the AI's tools read them live).
 
+### M9 — In-app user guide
+- [x] `/help` page (nav: Help): the rule lifecycle plus a step-by-step guide per role (rule-author, rule-approver, auditor), each step naming where in the UI to do it. Opens on the signed-in user's own role; other roles can be read via tabs. Content lives in `features/help/help-content.ts`.
+- Accept: each role sees its own steps first; the guide matches the real buttons and rules (e.g. approver must differ from author; import hidden for auditor).
+  - Covered by `help-page.spec.ts`. Not yet verified in a browser or deployed to GCP.
+
 ## Demo script (5 minutes)
 1. Login as analyst → Rules → open loan-eligibility → show decision table and annotations.
 2. Ask AI: "Explain this model" → plain-English answer with row citations.

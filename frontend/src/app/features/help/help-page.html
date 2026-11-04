@@ -1,0 +1,71 @@
+<section class="page help-page">
+  <div class="page-head">
+    <h1>User guide</h1>
+  </div>
+
+  <p class="intro">
+    Rules move through a controlled path before they go live. Each role handles different steps.
+  </p>
+
+  <ol class="lifecycle" aria-label="Rule lifecycle">
+    @for (s of lifecycle; track s; let last = $last) {
+      <li><span class="status-pill" [class]="s.toLowerCase()">{{ s }}</span>@if (!last) { <span class="arrow">→</span> }</li>
+    }
+  </ol>
+
+  <div class="role-tabs" role="tablist" aria-label="Choose a role">
+    @for (g of guides; track g.role) {
+      <button
+        type="button"
+        role="tab"
+        class="role-tab"
+        [class.active]="g.role === activeRole()"
+        [attr.aria-selected]="g.role === activeRole()"
+        (click)="show(g.role)"
+      >
+        {{ g.label }}
+        @if (g.role === ownRole()) {
+          <span class="you">you</span>
+        }
+      </button>
+    }
+  </div>
+
+  <div class="card guide">
+    <h2>{{ guide().label }}</h2>
+    <p class="summary">{{ guide().summary }}</p>
+
+    <ol class="steps">
+      @for (step of guide().steps; track step.title) {
+        <li class="step">
+          <h3>{{ step.title }}</h3>
+          <p class="where">{{ step.where }}</p>
+          <p>{{ step.detail }}</p>
+        </li>
+      }
+    </ol>
+
+    @if (guide().limits.length > 0) {
+      <h3 class="limits-title">Good to know</h3>
+      <ul class="limits">
+        @for (l of guide().limits; track $index) {
+          <li>{{ l }}</li>
+        }
+      </ul>
+    }
+  </div>
+
+  <div class="card">
+    <h2>For everyone</h2>
+    <ul class="limits">
+      @for (t of tips; track t) {
+        <li>{{ t }}</li>
+      }
+    </ul>
+    <p>
+      <a routerLink="/rules">Go to Rules</a> ·
+      <a routerLink="/ask-ai">Ask AI</a> ·
+      <a routerLink="/audit">Audit</a>
+    </p>
+  </div>
+</section>
