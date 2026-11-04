@@ -5,10 +5,11 @@
   Shows:
     * Nested data types up to four levels deep (Loan Request > property > address > postCode),
       lists of structures (incomes, liabilities) and allowed-value enumerations.
-    * A requirements graph (DRG): 3 inputs -> 11 chained decisions, a business knowledge model
+    * A requirements graph (DRG): 3 inputs -> 12 chained decisions, a business knowledge model
       (annuity payment) and a knowledge source.
     * FEEL: `for ... return` loops, list filters, sum/count/concatenate, if/else, a context
-      literal that returns a structured result, and a decision table with range tests.
+      literal that returns a structured result, and decision tables with range tests, including
+      one whose COLUMN expressions are calculations (Arrangement Fee).
 
   Try it with the inputs in mortgage-assessment.sample-input.json (expected outcome: REFER).
 -->
@@ -280,6 +281,51 @@
   flags: Red Flags
 }</text>
     </literalExpression>
+  </decision>
+
+  <!-- Decision table with CALCULATED COLUMNS (the input expressions) and CALCULATED OUTPUT CELLS. -->
+  <decision id="dec_fee" name="Arrangement Fee">
+    <variable id="dec_fee_v" name="Arrangement Fee" typeRef="number"/>
+    <informationRequirement id="ir_fee1"><requiredInput href="#in_loan"/></informationRequirement>
+    <informationRequirement id="ir_fee2"><requiredDecision href="#dec_income"/></informationRequirement>
+    <informationRequirement id="ir_fee3"><requiredDecision href="#dec_liabilities"/></informationRequirement>
+    <informationRequirement id="ir_fee4"><requiredDecision href="#dec_payment"/></informationRequirement>
+    <informationRequirement id="ir_fee5"><requiredDecision href="#dec_flags"/></informationRequirement>
+    <decisionTable id="dt_fee" hitPolicy="UNIQUE">
+      <input id="dt_fee_in1" label="Affordability cover">
+        <inputExpression id="dt_fee_in1_e" typeRef="number">
+          <text>(Verified Monthly Income - Monthly Liabilities) / Estimated Payment</text>
+        </inputExpression>
+      </input>
+      <input id="dt_fee_in2" label="Number of red flags">
+        <inputExpression id="dt_fee_in2_e" typeRef="number"><text>count(Red Flags)</text></inputExpression>
+      </input>
+      <output id="dt_fee_out" label="Fee"/>
+      <rule id="fe1">
+        <description>Comfortable cover, clean file: 0.3% of the loan, at least 500</description>
+        <inputEntry id="fe1_i1"><text>&gt;= 3</text></inputEntry>
+        <inputEntry id="fe1_i2"><text>&lt;= 0</text></inputEntry>
+        <outputEntry id="fe1_o"><text>max(500, Loan Request.amount * 0.003)</text></outputEntry>
+      </rule>
+      <rule id="fe2">
+        <description>Comfortable cover, with red flags: 0.4% of the loan, at least 750</description>
+        <inputEntry id="fe2_i1"><text>&gt;= 3</text></inputEntry>
+        <inputEntry id="fe2_i2"><text>&gt; 0</text></inputEntry>
+        <outputEntry id="fe2_o"><text>max(750, Loan Request.amount * 0.004)</text></outputEntry>
+      </rule>
+      <rule id="fe3">
+        <description>Moderate cover: 0.6% of the loan, at least 900</description>
+        <inputEntry id="fe3_i1"><text>[2..3)</text></inputEntry>
+        <inputEntry id="fe3_i2"><text>-</text></inputEntry>
+        <outputEntry id="fe3_o"><text>max(900, Loan Request.amount * 0.006)</text></outputEntry>
+      </rule>
+      <rule id="fe4">
+        <description>Thin cover: 1% of the loan plus a flat 250</description>
+        <inputEntry id="fe4_i1"><text>&lt; 2</text></inputEntry>
+        <inputEntry id="fe4_i2"><text>-</text></inputEntry>
+        <outputEntry id="fe4_o"><text>Loan Request.amount * 0.01 + 250</text></outputEntry>
+      </rule>
+    </decisionTable>
   </decision>
 
   <knowledgeSource id="ks_policy" name="Lending Policy">
