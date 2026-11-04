@@ -61,3 +61,116 @@
   background: #fef3c7;
   color: #92400e;
 }
+
+.import-panel {
+  margin-bottom: 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+}
+
+.drop-zone {
+  margin-top: 0.9rem;
+  padding: 1.1rem;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius);
+  text-align: center;
+  transition: background 0.15s, border-color 0.15s;
+
+  &.dragging {
+    background: #eef2ff;
+    border-color: var(--color-primary);
+  }
+
+  p {
+    margin: 0 0 0.75rem;
+  }
+
+  .hint {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    margin: 0.75rem 0 0;
+  }
+
+  .status {
+    margin-top: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+}
+
+.file-button {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.key-field {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+
+  .optional {
+    font-weight: 400;
+    color: var(--color-muted);
+  }
+
+  input {
+    width: 18rem;
+    max-width: 100%;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: #f3f4f6;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+}
+
+.import-result {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  background: var(--color-warn-bg);
+  border-radius: 8px;
+
+  h3 {
+    margin: 0 0 0.6rem;
+    font-size: 0.9rem;
+    color: var(--color-warn);
+  }
+
+  .message-list {
+    margin: 0 0 0.9rem;
+    padding-left: 1.1rem;
+    font-size: 0.82rem;
+
+    li.error {
+      color: var(--color-danger);
+    }
+
+    li.warn {
+      color: var(--color-warn);
+    }
+  }
+
+  .btn {
+    margin-right: 0.5rem;
+    text-decoration: none;
+  }
+}

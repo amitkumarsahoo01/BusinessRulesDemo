@@ -9,6 +9,7 @@ import {
   DecisionRule,
   DecisionSummary,
   DecisionTable,
+  ModelGraph,
   ModelSummary,
   ModelVersion,
   RuleChangeAudit,
@@ -17,13 +18,14 @@ import {
   ValidationResult,
 } from '../../core/models/rules.models';
 import { MarkdownView } from '../../shared/markdown-view/markdown-view';
+import { DmnStructure } from '../../shared/dmn-structure/dmn-structure';
 import { TraceView } from '../../shared/trace-view/trace-view';
 
 const HIT_POLICIES = ['UNIQUE', 'FIRST', 'PRIORITY', 'ANY', 'COLLECT', 'RULE_ORDER', 'OUTPUT_ORDER'];
 
 @Component({
   selector: 'app-rule-editor-page',
-  imports: [FormsModule, RouterLink, TraceView, MarkdownView, JsonPipe, DatePipe],
+  imports: [FormsModule, RouterLink, TraceView, MarkdownView, DmnStructure, JsonPipe, DatePipe],
   templateUrl: './rule-editor-page.html',
   styleUrl: './rule-editor-page.scss',
 })
@@ -37,6 +39,10 @@ export class RuleEditorPage implements OnInit {
   readonly decisions = signal<DecisionSummary[]>([]);
   readonly selectedDecisionName = signal<string | null>(null);
   readonly decisionTable = signal<DecisionTable | null>(null);
+  readonly graph = signal<ModelGraph | null>(null);
+  readonly graphError = signal<string | null>(null);
+  /** Overview first: the structure diagram, then the table editor via the tab or a double-click. */
+  readonly view = signal<'structure' | 'table'>('structure');
 
   readonly editableHitPolicy = signal('FIRST');
   readonly editableRules = signal<DecisionRule[]>([]);
@@ -111,7 +117,34 @@ export class RuleEditorPage implements OnInit {
     this.loadHistory();
   }
 
+  openTable(decisionName: string): void {
+    this.selectDecision(decisionName);
+    this.view.set('table');
+  }
+
+  downloadXml(): void {
+    const version = this.currentVersion();
+    if (!version) {
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([version.dmnXml], { type: 'application/xml' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${version.modelKey}-${version.version}.dmn`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private loadGraph(version: ModelVersion): void {
+    this.graphError.set(null);
+    this.modelsApi.getGraph(this.modelKey(), version.id).subscribe({
+      next: (graph) => this.graph.set(graph),
+      error: () => this.graphError.set('Could not read the model structure.'),
+    });
+  }
+
   private loadDecisions(version: ModelVersion): void {
+    this.loadGraph(version);
     this.modelsApi.listDecisions(this.modelKey(), version.id).subscribe((decisions) => {
       this.decisions.set(decisions);
       const firstTable = decisions.find((d) => d.kind === 'DECISION_TABLE');

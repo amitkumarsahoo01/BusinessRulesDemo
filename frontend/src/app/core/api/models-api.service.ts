@@ -6,6 +6,8 @@ import {
   DecisionDiff,
   DecisionSummary,
   DecisionTable,
+  ImportResult,
+  ModelGraph,
   ModelSummary,
   ModelVersion,
   RuleChangeAudit,
@@ -39,6 +41,19 @@ export class ModelsApiService {
     return this.http.get<DecisionTable>(
       `/api/models/${modelKey}/drafts/${versionId}/decisions/${encodeURIComponent(decisionName)}`,
     );
+  }
+
+  getGraph(modelKey: string, versionId: string): Observable<ModelGraph> {
+    return this.http.get<ModelGraph>(`/api/models/${modelKey}/drafts/${versionId}/graph`);
+  }
+
+  importDmn(file: File, modelKey?: string): Observable<ImportResult> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    if (modelKey?.trim()) {
+      body.append('modelKey', modelKey.trim());
+    }
+    return this.http.post<ImportResult>('/api/models/import', body);
   }
 
   history(modelKey: string): Observable<RuleChangeAudit[]> {

@@ -7,6 +7,7 @@ import org.kie.dmn.api.core.event.AfterEvaluateDecisionEvent;
 import org.kie.dmn.api.core.event.AfterEvaluateDecisionTableEvent;
 import org.kie.dmn.api.core.event.BeforeEvaluateDecisionEvent;
 import org.kie.dmn.api.core.event.DMNRuntimeEventListener;
+import org.kie.dmn.feel.runtime.FEELFunction;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -62,7 +63,7 @@ public class TraceCapturingListener implements DMNRuntimeEventListener {
         DMNDecisionResult decisionResult = event.getResult().getDecisionResultByName(decision.getName());
         Object result = decisionResult == null ? null : decisionResult.getResult();
 
-        Map<String, Object> inputsSnapshot = new LinkedHashMap<>(event.getResult().getContext().getAll());
+        Map<String, Object> inputsSnapshot = jsonSafe(event.getResult().getContext().getAll());
 
         List<String> messages = event.getResult().getMessages().stream()
                 .filter(m -> decision.getId().equals(m.getSourceId()))
@@ -82,6 +83,16 @@ public class TraceCapturingListener implements DMNRuntimeEventListener {
         steps.add(new TraceStepRecord(
                 nextSeq(), "DECISION_TABLE", event.getDecisionName(),
                 List.copyOf(event.getSelected()), null, null, null, null));
+    }
+
+    /**
+     * The engine's context also holds BKM functions, which are live engine objects (self-referencing,
+     * unserializable). The trace is stored as JSON and returned over REST, so show them as a marker.
+     */
+    private static Map<String, Object> jsonSafe(Map<String, Object> context) {
+        Map<String, Object> safe = new LinkedHashMap<>();
+        context.forEach((name, value) -> safe.put(name, value instanceof FEELFunction ? "(function)" : value));
+        return safe;
     }
 
     private static int nextSeq() {

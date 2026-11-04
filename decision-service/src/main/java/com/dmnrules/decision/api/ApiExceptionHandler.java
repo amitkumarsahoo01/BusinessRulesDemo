@@ -35,6 +35,14 @@ public class ApiExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ProblemDetail handleUploadTooLarge(org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.PAYLOAD_TOO_LARGE, "The uploaded file is too large (limit 2 MB).");
+        problem.setTitle("Upload too large");
+        return problem;
+    }
+
     @ExceptionHandler(InvalidLifecycleTransitionException.class)
     public ProblemDetail handleInvalidTransition(InvalidLifecycleTransitionException e) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());

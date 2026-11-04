@@ -97,6 +97,14 @@ Demo users (password `demo` for all, shown on login page):
 - Accept: `deploy.sh` on a billing-enabled project serves the app at the frontend's `run.app` URL, and Ask AI answers through it.
   - Verified live on project dmn-rules-demo-110320173 (us-central1): `/` and `/api/models` return 200 through the frontend, and an Ask AI question streamed a real answer via the Anthropic key from Secret Manager. Local docker-compose stack re-verified with the templated nginx config. Gotchas found and fixed: Postgres 16 defaults to Cloud SQL Enterprise Plus (needs `--edition ENTERPRISE` for `db-f1-micro`), and connection-slot exhaustion blocks new revisions from starting while old idle instances still hold pools.
 
+
+### M8 — DMN import and structure view
+- [x] `POST /api/models/import` (multipart `.dmn`, optional `modelKey`): creates a new model at 1.0.0, or the next patch draft of an existing key. Always a DRAFT; goes live only through validate -> test -> approve -> publish. DOCTYPE/XXE, non-DMN, empty-of-decisions, bad key and >2 MB uploads are rejected with problem+json.
+- [x] `GET /api/models/{key}/drafts/{id}/graph`: whole DRG (inputs, decisions, BKMs, knowledge sources, edges, data types with allowed values and nested components).
+- [x] UI: Import panel on Rules (hidden for the read-only auditor role; shows validator findings), and a Structure tab on the model page: requirements diagram, element details (hit policy, FEEL formula, requires / used by), data types, raw XML with download. Double-click or "Open decision table" jumps to the grid editor.
+- Accept: import a .dmn from the UI -> see its structure -> validate/test/approve/publish -> evaluate.
+  - Verified locally on Docker Desktop (compose stack) in the browser: uploading a DMN with a BKM, formula decision and knowledge source created a draft and opened its diagram; seed model shows tables with hit policy and row counts. `DmnImportIntegrationTest` drives an imported model all the way to a live evaluation. Bug found and fixed on the way: the trace snapshot included BKM function objects, which broke JSON serialization of test runs/audit traces for any model with a BKM. Known limits: roles are not enforced server-side (as elsewhere in this demo, X-User is trusted); the guided editor reads only the first output column of a table; imported models are not added to the AI retrieval index (the AI's tools read them live).
+
 ## Demo script (5 minutes)
 1. Login as analyst → Rules → open loan-eligibility → show decision table and annotations.
 2. Ask AI: "Explain this model" → plain-English answer with row citations.

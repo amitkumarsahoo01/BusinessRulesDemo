@@ -6,7 +6,10 @@ import com.dmnrules.decision.author.CreateTestCaseRequest;
 import com.dmnrules.decision.author.DecisionDiffEntry;
 import com.dmnrules.decision.author.DecisionSummaryDto;
 import com.dmnrules.decision.author.DecisionTableDto;
+import com.dmnrules.decision.author.DmnImportService;
 import com.dmnrules.decision.author.DmnValidationService;
+import com.dmnrules.decision.author.ImportResultDto;
+import com.dmnrules.decision.author.ModelGraphDto;
 import com.dmnrules.decision.author.DmnXmlEditor;
 import com.dmnrules.decision.author.ModelLifecycleService;
 import com.dmnrules.decision.author.ModelStructureDto;
@@ -20,6 +23,7 @@ import com.dmnrules.decision.author.ValidationResult;
 import com.dmnrules.decision.model.ModelRow;
 import com.dmnrules.decision.model.ModelVersionRepository;
 import com.dmnrules.decision.model.ModelVersionRow;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,7 +32,10 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,17 +49,19 @@ public class ModelsController {
     private final ModelLifecycleService lifecycleService;
     private final DmnXmlEditor xmlEditor;
     private final DmnValidationService validationService;
+    private final DmnImportService importService;
 
     public ModelsController(
             ModelVersionRepository versionRepository, RuleChangeAuditRepository auditRepository,
             TestCaseRepository testCaseRepository, ModelLifecycleService lifecycleService, DmnXmlEditor xmlEditor,
-            DmnValidationService validationService) {
+            DmnValidationService validationService, DmnImportService importService) {
         this.versionRepository = versionRepository;
         this.auditRepository = auditRepository;
         this.testCaseRepository = testCaseRepository;
         this.lifecycleService = lifecycleService;
         this.xmlEditor = xmlEditor;
         this.validationService = validationService;
+        this.importService = importService;
     }
 
     @GetMapping
@@ -116,6 +125,26 @@ public class ModelsController {
     @GetMapping("/{modelKey}/drafts/{id}/structure")
     public ModelStructureDto structure(@PathVariable String modelKey, @PathVariable UUID id) {
         return xmlEditor.readStructure(getVersion(modelKey, id).dmnXml());
+    }
+
+    @GetMapping("/{modelKey}/drafts/{id}/graph")
+    public ModelGraphDto graph(@PathVariable String modelKey, @PathVariable UUID id) {
+        return xmlEditor.readGraph(getVersion(modelKey, id).dmnXml());
+    }
+
+    /** Uploads a .dmn file as a new model (or a new draft of an existing one). Never publishes. */
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ImportResultDto importDmn(
+            @RequestParam("file") MultipartFile file, @RequestParam(value = "modelKey", required = false) String modelKey,
+            @RequestHeader(value = "X-User", defaultValue = "anonymous") String actor) throws IOException {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("The uploaded file is empty.");
+        }
+        String xml = new String(file.getBytes(), StandardCharsets.UTF_8);
+        if (xml.startsWith("﻿")) {
+            xml = xml.substring(1);
+        }
+        return importService.importModel(xml, modelKey, file.getOriginalFilename(), actor);
     }
 
     @GetMapping("/{modelKey}/drafts/{id}/analysis")

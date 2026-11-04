@@ -12,6 +12,9 @@ limit_req_zone $binary_remote_addr zone=ai_limit:10m rate=10r/m;
 server {
     listen ${PORT};
     server_name _;
+    # DMN imports (POST /api/models/import) are capped at 2 MB by the decision service; nginx's own
+    # default is 1 MB, which would reject mid-sized files before they reach it.
+    client_max_body_size 2m;
     root /usr/share/nginx/html;
     index index.html;
 

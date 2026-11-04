@@ -22,6 +22,31 @@
       <p class="empty error">{{ actionError() }}</p>
     }
 
+    <div class="view-switch" role="tablist">
+      <button type="button" role="tab" class="view-tab" [class.active]="view() === 'structure'"
+        [attr.aria-selected]="view() === 'structure'" (click)="view.set('structure')">Structure</button>
+      <button type="button" role="tab" class="view-tab" [class.active]="view() === 'table'"
+        [attr.aria-selected]="view() === 'table'" (click)="view.set('table')">Decision tables</button>
+    </div>
+
+    @if (view() === 'structure') {
+      <div class="card">
+        @if (graph(); as g) {
+          <app-dmn-structure [graph]="g" (openTable)="openTable($event)" />
+        } @else if (graphError()) {
+          <p class="empty error">{{ graphError() }}</p>
+        } @else {
+          <p class="empty">Loading structure…</p>
+        }
+        @if (currentVersion()) {
+          <details class="xml-source">
+            <summary>DMN XML</summary>
+            <button type="button" class="btn" (click)="downloadXml()">Download .dmn</button>
+            <pre>{{ currentVersion()!.dmnXml }}</pre>
+          </details>
+        }
+      </div>
+    } @else {
     <div class="decision-tabs">
       @for (decision of decisions(); track decision.name) {
         <button
@@ -39,8 +64,8 @@
     @if (!selectedDecisionIsTable()) {
       <div class="card">
         <p class="empty">
-          "{{ selectedDecisionName() }}" is a literal-expression decision — the guided grid editor only
-          edits decision tables. Use the full DMN diagram editor (stretch goal) for formulas.
+          "{{ selectedDecisionName() }}" is a formula decision — the grid editor only edits decision
+          tables. Its FEEL expression is shown on the Structure tab.
         </p>
       </div>
     } @else if (decisionTable()) {
@@ -245,6 +270,8 @@
           <button type="button" class="btn" (click)="addTestCase()">Save test case</button>
         </div>
       </div>
+    }
+
     }
 
     <div class="card">

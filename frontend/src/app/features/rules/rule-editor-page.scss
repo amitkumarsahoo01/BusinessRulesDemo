@@ -314,3 +314,49 @@
   border: 1px solid var(--color-border);
   border-radius: 8px;
 }
+
+.view-switch {
+  display: inline-flex;
+  margin-bottom: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.view-tab {
+  border: 0;
+  background: transparent;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-muted);
+
+  &.active {
+    background: var(--color-primary);
+    color: var(--color-primary-contrast);
+  }
+}
+
+.xml-source {
+  margin-top: 1.1rem;
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.6rem;
+  }
+
+  pre {
+    margin: 0.75rem 0 0;
+    max-height: 22rem;
+    overflow: auto;
+    padding: 0.8rem;
+    background: #111827;
+    color: #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.75rem;
+  }
+}

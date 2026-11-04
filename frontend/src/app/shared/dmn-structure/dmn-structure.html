@@ -1,0 +1,149 @@
+<div class="structure">
+  <p class="summary">
+    <strong>{{ counts().inputs }}</strong> {{ counts().inputs === 1 ? "input" : "inputs" }} ·
+    <strong>{{ counts().decisions }}</strong> {{ counts().decisions === 1 ? "decision" : "decisions" }}
+    @if (counts().knowledge > 0) {
+      · <strong>{{ counts().knowledge }}</strong> knowledge elements
+    }
+    — arrows show what each element requires. Click an element for details.
+  </p>
+
+  @if (graph().nodes.length === 0) {
+    <p class="empty">This model has no elements to draw.</p>
+  } @else {
+    <div class="diagram-scroll">
+      <svg
+        class="diagram"
+        [attr.width]="layout().width"
+        [attr.height]="layout().height"
+        [attr.viewBox]="'0 0 ' + layout().width + ' ' + layout().height"
+        role="img"
+        aria-label="DMN requirements diagram"
+      >
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-head" />
+          </marker>
+        </defs>
+
+        @for (e of layout().edges; track $index) {
+          <path
+            class="edge"
+            [class.knowledge]="e.edge.kind === 'KNOWLEDGE'"
+            [class.authority]="e.edge.kind === 'AUTHORITY'"
+            [class.active]="selectedId() === e.edge.from || selectedId() === e.edge.to"
+            [attr.d]="e.path"
+            marker-end="url(#arrow)"
+          />
+        }
+
+        @for (p of layout().nodes; track p.node.id) {
+          <g
+            class="node"
+            [class]="'node ' + p.node.type.toLowerCase()"
+            [class.selected]="selectedId() === p.node.id"
+            tabindex="0"
+            role="button"
+            [attr.aria-label]="typeLabel(p.node) + ' ' + p.node.name"
+            (click)="select(p.node)"
+            (keydown.enter)="select(p.node)"
+            (dblclick)="p.node.kind === 'DECISION_TABLE' && openTable.emit(p.node.name)"
+          >
+            <title>{{ p.node.name }}</title>
+            @switch (p.node.type) {
+              @case ('INPUT_DATA') {
+                <rect class="shape" [attr.x]="p.x" [attr.y]="p.y" [attr.width]="nodeWidth" [attr.height]="nodeHeight" [attr.rx]="nodeHeight / 2" />
+              }
+              @case ('BKM') {
+                <polygon class="shape" [attr.points]="bkmPoints(p)" />
+              }
+              @default {
+                <rect class="shape" [attr.x]="p.x" [attr.y]="p.y" [attr.width]="nodeWidth" [attr.height]="nodeHeight" rx="4" />
+              }
+            }
+            <text class="label" [attr.x]="p.x + nodeWidth / 2" [attr.y]="p.y + 26" text-anchor="middle">{{ title(p.node) }}</text>
+            <text class="sublabel" [attr.x]="p.x + nodeWidth / 2" [attr.y]="p.y + 44" text-anchor="middle">{{ subtitle(p.node) }}</text>
+          </g>
+        }
+      </svg>
+    </div>
+
+    <div class="legend">
+      <span><i class="swatch input"></i> Input data</span>
+      <span><i class="swatch decision"></i> Decision</span>
+      <span><i class="swatch bkm"></i> Business knowledge</span>
+      <span><i class="swatch ks"></i> Knowledge source</span>
+      <span class="line-key"><i class="line solid"></i> information</span>
+      <span class="line-key"><i class="line dashed"></i> knowledge</span>
+      <span class="line-key"><i class="line dotted"></i> authority</span>
+    </div>
+
+    @if (selected(); as node) {
+      <div class="details">
+        <h3>{{ node.name }}</h3>
+        <p class="kind">{{ typeLabel(node) }}</p>
+        <dl>
+          @if (node.typeRef) {
+            <dt>Type</dt>
+            <dd>{{ node.typeRef }}</dd>
+          }
+          @if (node.kind === 'DECISION_TABLE') {
+            <dt>Decision table</dt>
+            <dd>hit policy {{ node.hitPolicy }}, {{ node.ruleCount }} rows</dd>
+          }
+          @if (node.kind === 'LITERAL_EXPRESSION') {
+            <dt>Formula (FEEL)</dt>
+            <dd><code>{{ node.expressionText }}</code></dd>
+          }
+          @if (node.kind === 'OTHER') {
+            <dt>Logic</dt>
+            <dd>Uses a DMN expression type this view does not render; it still evaluates normally.</dd>
+          }
+          @if (node.description) {
+            <dt>Description</dt>
+            <dd>{{ node.description }}</dd>
+          }
+          <dt>Requires</dt>
+          <dd>
+            @for (n of requires(); track n.id) {
+              <span class="chip">{{ n.name }}</span>
+            } @empty {
+              <span class="none">nothing (a source)</span>
+            }
+          </dd>
+          <dt>Used by</dt>
+          <dd>
+            @for (n of usedBy(); track n.id) {
+              <span class="chip">{{ n.name }}</span>
+            } @empty {
+              <span class="none">nothing (a final result)</span>
+            }
+          </dd>
+        </dl>
+        @if (node.kind === 'DECISION_TABLE') {
+          <button type="button" class="btn primary" (click)="openTable.emit(node.name)">Open decision table</button>
+        }
+      </div>
+    }
+
+    @if (typeRows().length > 0) {
+      <div class="types">
+        <h3>Data types</h3>
+        <table class="data-table">
+          <thead>
+            <tr><th>Name</th><th>Type</th><th>Allowed values</th></tr>
+          </thead>
+          <tbody>
+            @for (row of typeRows(); track $index) {
+              <tr>
+                <td [style.padding-left.rem]="0.75 + row.depth * 1.25">{{ row.name }}</td>
+                <td>{{ row.typeRef ?? 'structure' }}@if (row.collection) { <span class="tag">list</span> }</td>
+                <td>@if (row.allowedValues) { <code>{{ row.allowedValues }}</code> } @else { — }</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

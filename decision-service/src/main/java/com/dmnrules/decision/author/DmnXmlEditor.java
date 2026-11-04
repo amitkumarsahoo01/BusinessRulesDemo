@@ -2,7 +2,11 @@ package com.dmnrules.decision.author;
 
 import org.kie.dmn.api.marshalling.DMNMarshaller;
 import org.kie.dmn.backend.marshalling.v1x.DMNMarshallerFactory;
+import org.kie.dmn.model.api.AuthorityRequirement;
+import org.kie.dmn.model.api.BusinessKnowledgeModel;
 import org.kie.dmn.model.api.DMNElementReference;
+import org.kie.dmn.model.api.ItemDefinition;
+import org.kie.dmn.model.api.KnowledgeSource;
 import org.kie.dmn.model.api.Decision;
 import org.kie.dmn.model.api.DecisionRule;
 import org.kie.dmn.model.api.DecisionTable;
@@ -87,6 +91,98 @@ public class DmnXmlEditor {
                 .toList();
 
         return new ModelStructureDto(inputs, decisions);
+    }
+
+    /** Whole DRG for the structure view: every element, how they depend on each other, and the data types. */
+    public ModelGraphDto readGraph(String dmnXml) {
+        Definitions definitions = parse(dmnXml);
+        List<GraphNodeDto> nodes = new java.util.ArrayList<>();
+        List<GraphEdgeDto> edges = new java.util.ArrayList<>();
+
+        for (var element : definitions.getDrgElement()) {
+            String id = element.getId();
+            if (element instanceof InputData input) {
+                nodes.add(new GraphNodeDto(id, input.getName(), "INPUT_DATA",
+                        typeRefText(input.getVariable() == null ? null : input.getVariable().getTypeRef()),
+                        null, null, null, null, input.getDescription()));
+            } else if (element instanceof Decision decision) {
+                nodes.add(decisionNode(decision));
+                for (var ir : decision.getInformationRequirement()) {
+                    addEdge(edges, ir.getRequiredInput(), id, "INFORMATION");
+                    addEdge(edges, ir.getRequiredDecision(), id, "INFORMATION");
+                }
+                for (var kr : decision.getKnowledgeRequirement()) {
+                    addEdge(edges, kr.getRequiredKnowledge(), id, "KNOWLEDGE");
+                }
+                for (var ar : decision.getAuthorityRequirement()) {
+                    addAuthorityEdges(edges, ar, id);
+                }
+            } else if (element instanceof BusinessKnowledgeModel bkm) {
+                nodes.add(new GraphNodeDto(id, bkm.getName(), "BKM",
+                        typeRefText(bkm.getVariable() == null ? null : bkm.getVariable().getTypeRef()),
+                        "FUNCTION", null, null, null, bkm.getDescription()));
+                for (var kr : bkm.getKnowledgeRequirement()) {
+                    addEdge(edges, kr.getRequiredKnowledge(), id, "KNOWLEDGE");
+                }
+                for (var ar : bkm.getAuthorityRequirement()) {
+                    addAuthorityEdges(edges, ar, id);
+                }
+            } else if (element instanceof KnowledgeSource source) {
+                nodes.add(new GraphNodeDto(id, source.getName(), "KNOWLEDGE_SOURCE", null,
+                        null, null, null, null, source.getDescription()));
+                for (var ar : source.getAuthorityRequirement()) {
+                    addAuthorityEdges(edges, ar, id);
+                }
+            }
+        }
+
+        // Drop edges to elements the file references but does not define (e.g. imported models).
+        java.util.Set<String> known = new java.util.HashSet<>();
+        nodes.forEach(n -> known.add(n.id()));
+        List<GraphEdgeDto> resolved = edges.stream()
+                .filter(e -> known.contains(e.from()) && known.contains(e.to()))
+                .toList();
+
+        List<ItemDefinitionDto> itemDefinitions = definitions.getItemDefinition().stream()
+                .map(this::toItemDefinitionDto)
+                .toList();
+        return new ModelGraphDto(definitions.getName(), definitions.getNamespace(), nodes, resolved, itemDefinitions);
+    }
+
+    private GraphNodeDto decisionNode(Decision decision) {
+        var expression = decision.getExpression();
+        String typeRef = typeRefText(decision.getVariable() == null ? null : decision.getVariable().getTypeRef());
+        if (expression instanceof DecisionTable table) {
+            return new GraphNodeDto(decision.getId(), decision.getName(), "DECISION", typeRef, "DECISION_TABLE",
+                    table.getHitPolicy().value(), table.getRule().size(), null, decision.getDescription());
+        }
+        if (expression instanceof LiteralExpression literal) {
+            return new GraphNodeDto(decision.getId(), decision.getName(), "DECISION", typeRef, "LITERAL_EXPRESSION",
+                    null, null, literal.getText(), decision.getDescription());
+        }
+        return new GraphNodeDto(decision.getId(), decision.getName(), "DECISION", typeRef, "OTHER",
+                null, null, null, decision.getDescription());
+    }
+
+    private static void addEdge(List<GraphEdgeDto> edges, DMNElementReference ref, String to, String kind) {
+        if (ref != null && ref.getHref() != null) {
+            String href = ref.getHref();
+            edges.add(new GraphEdgeDto(href.substring(href.lastIndexOf('#') + 1), to, kind));
+        }
+    }
+
+    private static void addAuthorityEdges(List<GraphEdgeDto> edges, AuthorityRequirement ar, String to) {
+        addEdge(edges, ar.getRequiredAuthority(), to, "AUTHORITY");
+        addEdge(edges, ar.getRequiredInput(), to, "AUTHORITY");
+        addEdge(edges, ar.getRequiredDecision(), to, "AUTHORITY");
+    }
+
+    private ItemDefinitionDto toItemDefinitionDto(ItemDefinition item) {
+        UnaryTests allowed = item.getAllowedValues();
+        return new ItemDefinitionDto(
+                item.getName(), typeRefText(item.getTypeRef()), item.isIsCollection(),
+                allowed == null ? null : allowed.getText(),
+                item.getItemComponent().stream().map(this::toItemDefinitionDto).toList());
     }
 
     public DecisionTableDto readDecisionTable(String dmnXml, String decisionName) {

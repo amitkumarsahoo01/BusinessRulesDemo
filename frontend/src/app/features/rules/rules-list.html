@@ -1,5 +1,61 @@
 <section class="page">
-  <h1>Rules</h1>
+  <div class="page-head">
+    <h1>Rules</h1>
+  </div>
+
+  @if (canImport()) {
+  <details class="import-panel" [open]="importing() || importError() !== null || importResult() !== null">
+    <summary>Import a DMN file</summary>
+    <div
+      class="drop-zone"
+      [class.dragging]="dragging()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="dragging.set(false)"
+      (drop)="onDrop($event, modelKeyInput.value)"
+    >
+      <p>
+        Drop a <code>.dmn</code> file here or
+        <label class="file-button">
+          browse
+          <input type="file" accept=".dmn,.xml" hidden (change)="onFileChosen($event, modelKeyInput.value)" />
+        </label>
+      </p>
+      <label class="key-field">
+        Model key <span class="optional">(optional — defaults to the model's name)</span>
+        <input #modelKeyInput type="text" placeholder="e.g. shipping-cost" autocomplete="off" />
+      </label>
+      <p class="hint">
+        The file becomes a <strong>draft</strong>. It goes live only after validate → test → approve → publish.
+        Importing into an existing model key creates its next draft version.
+      </p>
+      @if (importing()) {
+        <p class="status">Importing…</p>
+      }
+    </div>
+
+    @if (importError()) {
+      <p class="empty error">{{ importError() }}</p>
+    }
+
+    @if (importResult(); as result) {
+      <div class="import-result">
+        <h3>
+          Imported <strong>{{ result.version.modelKey }}</strong> v{{ result.version.version }} as a draft —
+          the validator found issues
+        </h3>
+        <ul class="message-list">
+          @for (m of result.messages; track $index) {
+            @if (m.severity === 'ERROR' || m.severity === 'WARN') {
+              <li [class]="m.severity.toLowerCase()"><strong>{{ m.severity }}</strong> — {{ m.message }}</li>
+            }
+          }
+        </ul>
+        <a class="btn primary" [routerLink]="['/rules', result.version.modelKey]">Open model</a>
+        <button type="button" class="btn" (click)="dismissResult()">Dismiss</button>
+      </div>
+    }
+  </details>
+  }
 
   @if (loading()) {
     <p class="empty">Loading models…</p>

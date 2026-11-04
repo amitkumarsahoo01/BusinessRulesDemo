@@ -243,7 +243,7 @@ public class ModelLifecycleService {
         }
     }
 
-    private static String incrementPatch(String version) {
+    static String incrementPatch(String version) {
         String[] parts = version.split("\\.");
         int major = parts.length > 0 ? Integer.parseInt(parts[0]) : 0;
         int minor = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20240513/MODEL/"
+             id="shipping" name="Shipping Cost" namespace="https://example.org/shipping">
+
+  <itemDefinition id="tZone" name="tZone">
+    <typeRef>string</typeRef>
+    <allowedValues><text>"EU","US"</text></allowedValues>
+  </itemDefinition>
+
+  <inputData id="in_weight" name="Weight">
+    <variable id="in_weight_v" name="Weight" typeRef="number"/>
+  </inputData>
+  <inputData id="in_zone" name="Zone">
+    <variable id="in_zone_v" name="Zone" typeRef="tZone"/>
+  </inputData>
+
+  <businessKnowledgeModel id="bkm_rate" name="Rate Per Kg">
+    <variable id="bkm_rate_v" name="Rate Per Kg"/>
+    <encapsulatedLogic id="bkm_rate_fn">
+      <formalParameter id="p1" name="zone" typeRef="string"/>
+      <literalExpression id="bkm_rate_le"><text>if zone = "EU" then 2 else 5</text></literalExpression>
+    </encapsulatedLogic>
+  </businessKnowledgeModel>
+
+  <decision id="dec_cost" name="Shipping Cost">
+    <variable id="dec_cost_v" name="Shipping Cost" typeRef="number"/>
+    <informationRequirement id="ir1"><requiredInput href="#in_weight"/></informationRequirement>
+    <informationRequirement id="ir2"><requiredInput href="#in_zone"/></informationRequirement>
+    <knowledgeRequirement id="kr1"><requiredKnowledge href="#bkm_rate"/></knowledgeRequirement>
+    <literalExpression id="dec_cost_le"><text>Weight * Rate Per Kg(Zone)</text></literalExpression>
+  </decision>
+
+  <knowledgeSource id="ks_policy" name="Carrier Policy">
+    <authorityRequirement id="ar1"><requiredDecision href="#dec_cost"/></authorityRequirement>
+  </knowledgeSource>
+</definitions>

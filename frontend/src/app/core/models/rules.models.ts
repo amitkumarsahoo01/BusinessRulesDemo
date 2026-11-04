@@ -130,3 +130,45 @@ export interface RuleChangeAudit {
   diffJson: string | null;
   at: string;
 }
+
+export type GraphNodeType = 'INPUT_DATA' | 'DECISION' | 'BKM' | 'KNOWLEDGE_SOURCE';
+
+export interface GraphNode {
+  id: string;
+  name: string;
+  type: GraphNodeType;
+  typeRef: string | null;
+  kind: 'DECISION_TABLE' | 'LITERAL_EXPRESSION' | 'FUNCTION' | 'OTHER' | null;
+  hitPolicy: string | null;
+  ruleCount: number | null;
+  expressionText: string | null;
+  description: string | null;
+}
+
+export interface GraphEdge {
+  from: string;
+  to: string;
+  kind: 'INFORMATION' | 'KNOWLEDGE' | 'AUTHORITY';
+}
+
+export interface ItemDefinition {
+  name: string;
+  typeRef: string | null;
+  collection: boolean;
+  allowedValues: string | null;
+  components: ItemDefinition[];
+}
+
+export interface ModelGraph {
+  name: string | null;
+  namespace: string | null;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  itemDefinitions: ItemDefinition[];
+}
+
+export interface ImportResult {
+  version: ModelVersion;
+  newModel: boolean;
+  messages: ValidationMessage[];
+}

@@ -13,6 +13,11 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:dmn_rules}
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      # DMN files are small text; this bounds the in-memory read in ModelsController.importDmn.
+      max-file-size: 2MB
+      max-request-size: 2MB
 
 demo:
   seed:
