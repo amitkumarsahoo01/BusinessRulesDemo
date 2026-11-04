@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Sample for trying the "Import a DMN file" panel (Rules page).
+  Shows: allowed-value data type, two inputs, a decision table (hit policy UNIQUE),
+  and a formula decision that depends on the table's result.
+-->
+<definitions xmlns="https://www.omg.org/spec/DMN/20240513/MODEL/"
+             id="order-discount" name="Order Discount" namespace="https://example.org/order-discount">
+
+  <itemDefinition id="tCustomerTier" name="tCustomerTier">
+    <typeRef>string</typeRef>
+    <allowedValues><text>"Bronze","Silver","Gold"</text></allowedValues>
+  </itemDefinition>
+
+  <inputData id="in_tier" name="Customer Tier">
+    <variable id="in_tier_v" name="Customer Tier" typeRef="tCustomerTier"/>
+  </inputData>
+  <inputData id="in_total" name="Order Total">
+    <variable id="in_total_v" name="Order Total" typeRef="number"/>
+  </inputData>
+
+  <decision id="dec_discount" name="Discount Percent">
+    <variable id="dec_discount_v" name="Discount Percent" typeRef="number"/>
+    <informationRequirement id="ir_d1"><requiredInput href="#in_tier"/></informationRequirement>
+    <informationRequirement id="ir_d2"><requiredInput href="#in_total"/></informationRequirement>
+    <decisionTable id="dt_discount" hitPolicy="UNIQUE">
+      <input id="dt_in_tier" label="Customer Tier">
+        <inputExpression id="dt_in_tier_e" typeRef="string"><text>Customer Tier</text></inputExpression>
+      </input>
+      <input id="dt_in_total" label="Order Total">
+        <inputExpression id="dt_in_total_e" typeRef="number"><text>Order Total</text></inputExpression>
+      </input>
+      <output id="dt_out" label="Discount Percent"/>
+      <rule id="r1">
+        <description>Gold, large order</description>
+        <inputEntry id="r1_i1"><text>"Gold"</text></inputEntry>
+        <inputEntry id="r1_i2"><text>&gt;= 100</text></inputEntry>
+        <outputEntry id="r1_o"><text>15</text></outputEntry>
+      </rule>
+      <rule id="r2">
+        <description>Gold, small order</description>
+        <inputEntry id="r2_i1"><text>"Gold"</text></inputEntry>
+        <inputEntry id="r2_i2"><text>&lt; 100</text></inputEntry>
+        <outputEntry id="r2_o"><text>10</text></outputEntry>
+      </rule>
+      <rule id="r3">
+        <description>Silver, large order</description>
+        <inputEntry id="r3_i1"><text>"Silver"</text></inputEntry>
+        <inputEntry id="r3_i2"><text>&gt;= 100</text></inputEntry>
+        <outputEntry id="r3_o"><text>10</text></outputEntry>
+      </rule>
+      <rule id="r4">
+        <description>Silver, small order</description>
+        <inputEntry id="r4_i1"><text>"Silver"</text></inputEntry>
+        <inputEntry id="r4_i2"><text>&lt; 100</text></inputEntry>
+        <outputEntry id="r4_o"><text>5</text></outputEntry>
+      </rule>
+      <rule id="r5">
+        <description>Bronze, very large order</description>
+        <inputEntry id="r5_i1"><text>"Bronze"</text></inputEntry>
+        <inputEntry id="r5_i2"><text>&gt;= 200</text></inputEntry>
+        <outputEntry id="r5_o"><text>5</text></outputEntry>
+      </rule>
+      <rule id="r6">
+        <description>Bronze, otherwise</description>
+        <inputEntry id="r6_i1"><text>"Bronze"</text></inputEntry>
+        <inputEntry id="r6_i2"><text>&lt; 200</text></inputEntry>
+        <outputEntry id="r6_o"><text>0</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+  <decision id="dec_price" name="Final Price">
+    <variable id="dec_price_v" name="Final Price" typeRef="number"/>
+    <informationRequirement id="ir_p1"><requiredInput href="#in_total"/></informationRequirement>
+    <informationRequirement id="ir_p2"><requiredDecision href="#dec_discount"/></informationRequirement>
+    <literalExpression id="dec_price_le"><text>Order Total * (1 - Discount Percent / 100)</text></literalExpression>
+  </decision>
+</definitions>
