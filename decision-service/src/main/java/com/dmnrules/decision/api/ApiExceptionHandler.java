@@ -57,6 +57,13 @@ public class ApiExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(com.dmnrules.decision.auth.UnauthenticatedException.class)
+    public ProblemDetail handleUnauthenticated(com.dmnrules.decision.auth.UnauthenticatedException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
+        problem.setTitle("Not signed in");
+        return problem;
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     public ProblemDetail handleInvalidCredentials(InvalidCredentialsException e) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());

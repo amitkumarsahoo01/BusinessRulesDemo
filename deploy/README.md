@@ -24,6 +24,11 @@ open to the internet.
    - `DEMO_DOMAIN` — the hostname from step 1.
    - `ANTHROPIC_API_KEY` — required for the "Ask AI" feature to answer anything. Everything else in
      the demo (Rules, Audit, evaluate/simulate) works without one.
+   - `DEMO_ADMIN_PASSWORD` — password for the `admin` account, the only account that can open the
+     admin console (`/admin`) and change the LLM provider. Set a strong one on a public VM; if left
+     blank a random one is printed once in the decision-service log on each start.
+   - `AUTH_TOKEN_SECRET` — any long random string; signs session tokens. Blank works for a single
+     instance but signs everyone out on restart.
    - `RESET_DEMO_ON_START` — leave at `true` for a public demo so it always comes back clean after
      a restart; set `false` on a VM where you want manually authored drafts/approvals to survive a
      restart.

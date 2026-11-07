@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
+import { AskBob } from './features/chat/ask-bob';
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, AskBob],
   selector: 'app-root',
   styleUrl: './app.scss',
   templateUrl: './app.html',

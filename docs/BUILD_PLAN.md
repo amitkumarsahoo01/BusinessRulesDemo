@@ -17,6 +17,7 @@ Demo users (password `demo` for all, shown on login page):
 - `analyst` — rule-author
 - `approver` — rule-approver
 - `auditor` — auditor (read-only)
+- `admin` — admin console only (LLM provider). Not a demo account: password from `DEMO_ADMIN_PASSWORD`, never `demo`, not shown on the login page.
 
 ## Seed content
 - Model `loan-eligibility` (DMN 1.5/1.6): inputs Applicant(age, creditScore, income, employmentYears),
@@ -109,6 +110,14 @@ Demo users (password `demo` for all, shown on login page):
 - [x] `/help` page (nav: Help): the rule lifecycle plus a step-by-step guide per role (rule-author, rule-approver, auditor), each step naming where in the UI to do it. Opens on the signed-in user's own role; other roles can be read via tabs. Content lives in `features/help/help-content.ts`.
 - Accept: each role sees its own steps first; the guide matches the real buttons and rules (e.g. approver must differ from author; import hidden for auditor).
   - Covered by `help-page.spec.ts`. Not yet verified in a browser or deployed to GCP.
+
+### M10 — Dashboard, Ask Bob, admin console
+- [x] Dashboard (new landing page): KPI tiles (executions with trend, success rate, avg/p95 latency, live models), executions-over-time stacked by model with hover tooltip and table view (7/30/90 days, model filter), decision-outcome distributions, "Rules at a glance" cards (live version, draft, decisions with hit policy and rule counts, inputs, runs, last run). Backed by `GET /api/dashboard/executions` and `GET /api/dashboard/rules`.
+- [x] "Ask Bob": floating assistant bottom-right on every page (except the full Ask AI page), context pinned from the current page, same tools/citations/audit as Ask AI.
+- [x] Admin console (`/admin`): switch provider (Anthropic / OpenAI-compatible / Ollama), model and base URL at runtime with no restart; test connection; append-only change history. Keys stay in env vars.
+- [x] Real access control for admin: signed session tokens from login, verified by decision-service (`GET /api/auth/me`) on every `/api/ai/admin/**` call; `admin` account with its own password.
+- Accept: only the admin can open the console or call its API (forged `X-User` rejected); switching provider changes who answers the next question without a restart.
+  - Verified: decision-service 45 tests (new: `DashboardAndAuthIntegrationTest`, `TokenServiceTest`, `DashboardServiceTest`), ai-service 29 tests incl. `AdminLlmControllerTest` against a real decision-service container (admin 200 / analyst 403 / no token, garbage token and forged `X-User: admin` 401 / provider without key refused) and `LlmRouterTest`; frontend 42 tests. Live via `docker compose` in Chrome: dashboard renders the seeded 318 executions, Ask Bob opens and pins `model loan-eligibility` on a rule page, admin console tested and switched to a host Ollama (`llama3.2`), Ask Bob then answered through it with a tool call, and the choice survived an ai-service restart. Not verified: OpenAI/Anthropic answering after a switch (no spend on real keys), Cloud Run redeploy with the new secrets.
 
 ## Demo script (5 minutes)
 1. Login as analyst → Rules → open loan-eligibility → show decision table and annotations.

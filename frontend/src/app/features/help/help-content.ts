@@ -150,9 +150,42 @@ export const ROLE_GUIDES: RoleGuide[] = [
       'Do not use editing, approving or publishing buttons; they belong to the other roles.',
     ],
   },
+  {
+    role: 'admin',
+    label: 'Administrator',
+    summary: 'You choose which language model powers Ask AI and Ask Bob. You do not author or approve rules.',
+    steps: [
+      {
+        title: 'Check what is active',
+        where: 'Admin',
+        detail: 'The top of the page shows the current provider and model, and who set it.',
+      },
+      {
+        title: 'Pick a provider and model',
+        where: 'Admin → LLM provider',
+        detail:
+          'Choose Anthropic, OpenAI (or an OpenAI-compatible gateway) or a self-hosted Ollama, then pick a model. Providers whose API key is not set on the server cannot be chosen.',
+      },
+      {
+        title: 'Test before you switch',
+        where: 'Admin → Test connection',
+        detail: 'Sends one tiny prompt with the new settings without changing anything for other users.',
+      },
+      {
+        title: 'Save and apply',
+        where: 'Admin → Save and apply',
+        detail: 'Takes effect right away for new questions, with no restart. Every change is recorded in Change history.',
+      },
+    ],
+    limits: [
+      'API keys are never typed into the app; they come from server environment variables.',
+      'Changing the model never changes a decision: decisions always come from the DMN engine.',
+    ],
+  },
 ];
 
 export const COMMON_TIPS: string[] = [
+  'Ask Bob (bottom-right on every page) answers questions about the page you are on.',
   'Only the DMN engine makes decisions. The AI explains and cites; it never decides.',
   'Every evaluation is recorded in the Audit area and cannot be edited.',
   'The first request after a quiet period can take several seconds on the cloud demo.',

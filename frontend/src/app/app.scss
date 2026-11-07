@@ -34,6 +34,15 @@
   color: #fff;
 }
 
+.app-nav a.admin-link {
+  color: #fdba74;
+}
+
+.app-nav a.admin-link.active,
+.app-nav a.admin-link:hover {
+  color: #fed7aa;
+}
+
 .app-user {
   display: flex;
   align-items: center;

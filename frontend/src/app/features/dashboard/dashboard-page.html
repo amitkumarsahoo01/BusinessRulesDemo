@@ -1,0 +1,278 @@
+<section class="page dashboard">
+  <header class="dash-header">
+    <div>
+      <h1>Dashboard</h1>
+      <p class="subtitle">Decision activity and the rules behind it. Times are UTC.</p>
+    </div>
+    <div class="filters">
+      <label class="model-filter">
+        <span class="sr-only">Model</span>
+        <select [value]="modelFilter() ?? ''" (change)="setModel($any($event.target).value)">
+          <option value="">All models</option>
+          @for (r of rules(); track r.modelKey) {
+            <option [value]="r.modelKey">{{ r.name }}</option>
+          }
+        </select>
+      </label>
+      <div class="segmented" role="group" aria-label="Time range">
+        @for (d of ranges; track d) {
+          <button type="button" [class.active]="days() === d" [attr.aria-pressed]="days() === d" (click)="setDays(d)">
+            {{ d }}d
+          </button>
+        }
+      </div>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="empty error">{{ error() }}</p>
+  }
+
+  <!-- KPI tiles -->
+  <div class="kpis">
+    <div class="kpi">
+      <span class="kpi-label">Executions</span>
+      <span class="kpi-value">{{ stats() ? (stats()!.total | number) : '—' }}</span>
+      <span class="kpi-sub">
+        @if (trend() !== null) {
+          <span class="trend" [class.up]="trend()! > 0" [class.down]="trend()! < 0">
+            {{ trend()! > 0 ? '▲' : trend()! < 0 ? '▼' : '■' }} {{ trend()! > 0 ? '+' : '' }}{{ trend() }}%
+          </span>
+          vs previous {{ days() }} days
+        } @else {
+          last {{ days() }} days
+        }
+      </span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Success rate</span>
+      <span class="kpi-value">{{ successRate() !== null ? (successRate()! | percent: '1.0-1') : '—' }}</span>
+      <span class="kpi-sub">{{ stats()?.failed ?? 0 | number }} failed evaluations</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Avg latency</span>
+      <span class="kpi-value">{{ stats() ? (stats()!.avgDurationMs | number: '1.0-1') : '—' }}<small> ms</small></span>
+      <span class="kpi-sub">p95 {{ stats() ? (stats()!.p95DurationMs | number: '1.0-0') : '—' }} ms</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Live models</span>
+      <span class="kpi-value">{{ liveModels() }}<small> / {{ rules().length }}</small></span>
+      <span class="kpi-sub">{{ totalRules() }} table rules · {{ draftsInFlight() }} draft{{ draftsInFlight() === 1 ? '' : 's' }} in progress</span>
+    </div>
+  </div>
+
+  <div class="grid-main">
+    <!-- Executions over time -->
+    <article class="card chart-card">
+      <header class="card-head">
+        <div>
+          <h2>Executions over time</h2>
+          @if (busiestDay(); as busy) {
+            <p class="card-sub">Busiest day: {{ formatDay(busy.date, true) }} with {{ busy.total }}</p>
+          }
+        </div>
+        @if (legend().length > 1) {
+          <ul class="legend">
+            @for (l of legend(); track l.modelKey) {
+              <li><span class="swatch" [style.background]="l.color"></span>{{ modelName(l.modelKey) }}</li>
+            }
+          </ul>
+        }
+      </header>
+
+      @if (loading() && !stats()) {
+        <div class="chart-skeleton"></div>
+      } @else if (stats(); as s) {
+        @if (s.total === 0) {
+          <p class="empty">No executions in the last {{ days() }} days.</p>
+        } @else {
+          <div class="chart" (mouseleave)="hovered.set(null)">
+            <div class="y-axis" aria-hidden="true">
+              @for (t of scale().ticks; track t) {
+                <span [style.bottom.%]="(t / scale().max) * 100">{{ t }}</span>
+              }
+            </div>
+            <div class="plot">
+              @for (t of scale().ticks; track t) {
+                <div class="gridline" [class.baseline]="t === 0" [style.bottom.%]="(t / scale().max) * 100"></div>
+              }
+              <div class="columns" [class.dense]="s.daily.length > 45">
+                @for (day of s.daily; track day.date; let i = $index) {
+                  <div
+                    class="col-hit"
+                    [class.dimmed]="hovered() !== null && hovered() !== i"
+                    (mouseenter)="hovered.set(i)"
+                    (focus)="hovered.set(i)"
+                    (blur)="hovered.set(null)"
+                    tabindex="0"
+                    [attr.aria-label]="formatDay(day.date, true) + ': ' + day.total + ' executions'"
+                  >
+                    <div class="stack" [style.height.%]="columnHeight(day)">
+                      @for (seg of segments(day); track seg.modelKey) {
+                        <div class="seg" [style.flex-grow]="seg.count" [style.background]="seg.color"></div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+              @if (hoveredDay(); as hd) {
+                <div class="tooltip" [style]="tooltipStyle(hovered()!)">
+                  <strong>{{ formatDay(hd.date, true) }}</strong>
+                  <div class="tt-total">{{ hd.total }} execution{{ hd.total === 1 ? '' : 's' }}</div>
+                  @for (seg of segments(hd); track seg.modelKey) {
+                    <div class="tt-row"><span class="swatch" [style.background]="seg.color"></span>{{ modelName(seg.modelKey) }}<b>{{ seg.count }}</b></div>
+                  }
+                  @if (hd.failed > 0) {
+                    <div class="tt-failed">{{ hd.failed }} failed</div>
+                  }
+                </div>
+              }
+            </div>
+            <div class="x-axis" aria-hidden="true">
+              @for (day of s.daily; track day.date; let i = $index) {
+                <span>{{ showLabel(i) ? formatDay(day.date) : '' }}</span>
+              }
+            </div>
+          </div>
+
+          <details class="table-view">
+            <summary>Show as table</summary>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  @for (l of legend(); track l.modelKey) {
+                    <th>{{ modelName(l.modelKey) }}</th>
+                  }
+                  <th>Total</th>
+                  <th>Failed</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (day of s.daily; track day.date) {
+                  <tr>
+                    <td>{{ formatDay(day.date, true) }}</td>
+                    @for (l of legend(); track l.modelKey) {
+                      <td>{{ day.byModel[l.modelKey] ?? 0 }}</td>
+                    }
+                    <td>{{ day.total }}</td>
+                    <td>{{ day.failed }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </details>
+        }
+      }
+    </article>
+
+    <!-- Outcomes -->
+    <article class="card outcomes-card">
+      <header class="card-head">
+        <div>
+          <h2>Decision outcomes</h2>
+          <p class="card-sub">What the engine decided, last {{ days() }} days</p>
+        </div>
+      </header>
+      @for (o of stats()?.outcomes ?? []; track o.modelKey + o.output) {
+        <div class="outcome">
+          <div class="outcome-title">
+            <span class="swatch" [style.background]="colorOf(o.modelKey)"></span>
+            <span>{{ modelName(o.modelKey) }}</span>
+            <span class="muted">· {{ o.output }}</span>
+          </div>
+          @let total = o.values.reduce((sum, v) => sum + v.count, 0);
+          <div class="outcome-bar" role="img" [attr.aria-label]="o.output + ' distribution'">
+            @for (v of o.values; track v.value) {
+              <span class="ob-seg tone-{{ outcomeTone(v.value) }}" [style.flex-grow]="v.count" [title]="v.value + ': ' + v.count"></span>
+            }
+          </div>
+          <ul class="outcome-list">
+            @for (v of o.values; track v.value) {
+              <li>
+                <span class="dot tone-{{ outcomeTone(v.value) }}"></span>
+                <span class="ov-name">{{ v.value }}</span>
+                <span class="ov-count">{{ v.count | number }}</span>
+                <span class="ov-share">{{ share(v.count, total) | percent: '1.0-0' }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      } @empty {
+        <p class="empty small">No categorical outcomes in this period.</p>
+      }
+    </article>
+  </div>
+
+  <!-- Rules at a glance -->
+  <h2 class="section-title">Rules at a glance</h2>
+  <div class="rule-grid">
+    @for (r of rules(); track r.modelKey) {
+      <article class="rule-card">
+        <span class="rule-accent" [style.background]="colorOf(r.modelKey)"></span>
+        <header class="rule-head">
+          <div>
+            <h3>{{ r.name }}</h3>
+            <code class="rule-key">{{ r.modelKey }}</code>
+          </div>
+          <div class="pills">
+            @if (r.liveVersion) {
+              <span class="status-pill published">live v{{ r.liveVersion }}</span>
+            } @else {
+              <span class="status-pill draft">not live</span>
+            }
+            @if (r.inProgressVersion) {
+              <span class="status-pill {{ r.inProgressStatus?.toLowerCase() }}">v{{ r.inProgressVersion }} {{ r.inProgressStatus?.toLowerCase() }}</span>
+            }
+          </div>
+        </header>
+
+        <dl class="rule-stats">
+          <div><dt>Inputs</dt><dd>{{ r.inputs.length }}</dd></div>
+          <div><dt>Decisions</dt><dd>{{ r.decisions.length }}</dd></div>
+          <div><dt>Rules</dt><dd>{{ ruleCount(r) }}</dd></div>
+          <div><dt>Runs ({{ days() }}d)</dt><dd>{{ r.executionsInPeriod | number }}</dd></div>
+        </dl>
+
+        <ul class="decision-list">
+          @for (d of r.decisions; track d.name) {
+            <li>
+              <span class="d-icon" [class.table]="d.kind === 'DECISION_TABLE'" aria-hidden="true">{{ d.kind === 'DECISION_TABLE' ? '▦' : 'ƒ' }}</span>
+              <span class="d-name">{{ d.name }}</span>
+              @if (d.kind === 'DECISION_TABLE') {
+                <span class="d-meta">{{ d.hitPolicy }} · {{ d.ruleCount }} rule{{ d.ruleCount === 1 ? '' : 's' }}</span>
+              } @else {
+                <span class="d-meta">formula</span>
+              }
+            </li>
+          }
+        </ul>
+
+        <p class="inputs-line">
+          <span class="muted">Uses</span>
+          @for (i of r.inputs; track i.name; let last = $last) {
+            {{ i.name }}{{ last ? '' : ', ' }}
+          }
+        </p>
+
+        @if (r.changeNote) {
+          <p class="change-note">“{{ r.changeNote }}”</p>
+        }
+
+        <footer class="rule-foot">
+          <span>
+            Last run {{ formatRelative(r.lastExecutedAt) }}
+            @if (r.failedInPeriod > 0) {
+              · <span class="fail-text">{{ r.failedInPeriod }} failed</span>
+            }
+          </span>
+          <a [routerLink]="['/rules', r.modelKey]">Open →</a>
+        </footer>
+      </article>
+    } @empty {
+      @if (!loading()) {
+        <p class="empty">No models yet. Import one from the Rules page.</p>
+      }
+    }
+  </div>
+</section>

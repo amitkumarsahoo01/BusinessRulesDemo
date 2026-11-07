@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
-import { User } from '../models/auth.models';
+import { ADMIN_ROLE, User } from '../models/auth.models';
 
 const STORAGE_KEY = 'dmn-rules-demo.user';
 
@@ -11,6 +11,8 @@ export class AuthService {
 
   readonly currentUser = this.currentUserSignal.asReadonly();
   readonly isLoggedIn = computed(() => this.currentUserSignal() !== null);
+  /** Only controls what the UI shows; the server independently verifies the token on admin calls. */
+  readonly isAdmin = computed(() => this.currentUserSignal()?.role === ADMIN_ROLE);
 
   constructor(private readonly http: HttpClient) {}
 

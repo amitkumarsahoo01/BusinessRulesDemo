@@ -22,6 +22,12 @@ spring:
 demo:
   seed:
     enabled: ${RESET_DEMO_ON_START:true}
+  auth:
+    # HMAC secret for session tokens. Blank = random per process (fine for one local instance).
+    token-secret: ${AUTH_TOKEN_SECRET:}
+    token-ttl: PT12H
+    # Password for the 'admin' account (admin console). Blank = random, logged once at startup.
+    admin-password: ${DEMO_ADMIN_PASSWORD:}
 
 management:
   endpoints:

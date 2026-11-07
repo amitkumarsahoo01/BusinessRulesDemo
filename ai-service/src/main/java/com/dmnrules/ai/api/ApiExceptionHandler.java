@@ -18,6 +18,20 @@ public class ApiExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(com.dmnrules.ai.admin.AdminAccessDeniedException.class)
+    public ProblemDetail handleAdminAccessDenied(com.dmnrules.ai.admin.AdminAccessDeniedException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(e.status(), e.getMessage());
+        problem.setTitle(e.status() == HttpStatus.UNAUTHORIZED ? "Not signed in" : "Forbidden");
+        return problem;
+    }
+
+    @ExceptionHandler(com.dmnrules.ai.llm.InvalidLlmSettingsException.class)
+    public ProblemDetail handleInvalidLlmSettings(com.dmnrules.ai.llm.InvalidLlmSettingsException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+        problem.setTitle("Invalid LLM settings");
+        return problem;
+    }
+
     @ExceptionHandler(RestClientResponseException.class)
     public ProblemDetail handleDecisionServiceError(RestClientResponseException e) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(

@@ -1,9 +1,9 @@
 package com.dmnrules.ai.chat;
 
+import com.dmnrules.ai.llm.LlmRouter;
 import com.dmnrules.ai.retrieval.DocumentRetrievalTools;
 import com.dmnrules.ai.tools.RuleTools;
 import com.dmnrules.ai.tools.ToolCallLog;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -44,16 +44,16 @@ public class ChatService {
               rows or executions).
             """;
 
-    private final ChatClient chatClient;
+    private final LlmRouter llmRouter;
     private final RuleTools ruleTools;
     private final DocumentRetrievalTools documentRetrievalTools;
     private final ConversationRepository conversationRepository;
     private final InteractionAuditRepository auditRepository;
 
     public ChatService(
-            ChatClient chatClient, RuleTools ruleTools, DocumentRetrievalTools documentRetrievalTools,
+            LlmRouter llmRouter, RuleTools ruleTools, DocumentRetrievalTools documentRetrievalTools,
             ConversationRepository conversationRepository, InteractionAuditRepository auditRepository) {
-        this.chatClient = chatClient;
+        this.llmRouter = llmRouter;
         this.ruleTools = ruleTools;
         this.documentRetrievalTools = documentRetrievalTools;
         this.conversationRepository = conversationRepository;
@@ -88,7 +88,9 @@ public class ChatService {
         List<ToolCallLog.Entry> toolLog = new CopyOnWriteArrayList<>();
         StringBuilder fullResponse = new StringBuilder();
 
-        return chatClient.prompt()
+        // Read the active client once per message: an admin switching provider mid-stream doesn't
+        // affect a reply already in progress.
+        return llmRouter.chatClient().prompt()
                 .system(SYSTEM_PROMPT + pinnedContextNote(conversation))
                 .messages(history)
                 .user(userContent)

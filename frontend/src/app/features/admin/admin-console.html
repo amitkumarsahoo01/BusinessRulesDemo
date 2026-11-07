@@ -1,0 +1,145 @@
+<section class="page admin">
+  <header class="admin-header">
+    <div>
+      <span class="badge">Admin</span>
+      <h1>Admin console</h1>
+      <p class="subtitle">Choose the language model behind Ask AI and Ask Bob. Changes apply immediately for everyone.</p>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="card skeleton"></div>
+  } @else if (loadError()) {
+    <div class="empty error">
+      <p>{{ loadError() }}</p>
+      <button type="button" class="btn" (click)="signInAgain()">Sign in again</button>
+    </div>
+  } @else if (view(); as v) {
+    <div class="layout">
+      <article class="card">
+        <h2>LLM provider</h2>
+        <p class="hint">
+          Currently <strong>{{ providerLabel(v.current.provider) }}</strong> · <code>{{ v.current.model }}</code>
+          @if (v.current.updatedBy) {
+            <span class="muted">· set by {{ v.current.updatedBy }} {{ v.current.updatedAt | date: 'medium' }}</span>
+          } @else {
+            <span class="muted">· from server defaults (AI_PROVIDER / AI_MODEL)</span>
+          }
+        </p>
+
+        <div class="providers" role="radiogroup" aria-label="Provider">
+          @for (p of v.providers; track p.id) {
+            <button
+              type="button"
+              role="radio"
+              class="provider"
+              [class.selected]="provider() === p.id"
+              [attr.aria-checked]="provider() === p.id"
+              (click)="selectProvider(p)"
+            >
+              <span class="provider-name">
+                {{ p.label }}
+                @if (v.current.provider === p.id) {
+                  <span class="active-tag">active</span>
+                }
+              </span>
+              @if (!p.requiresApiKey) {
+                <span class="key ok">✓ No API key needed</span>
+              } @else if (p.apiKeyConfigured) {
+                <span class="key ok">✓ API key configured</span>
+              } @else {
+                <span class="key missing">✕ API key not set on server</span>
+              }
+            </button>
+          }
+        </div>
+
+        @if (selected(); as sel) {
+          <form class="settings" (ngSubmit)="save()">
+            <label>
+              Model
+              <input name="model" [(ngModel)]="model" list="model-suggestions" required autocomplete="off" />
+              <datalist id="model-suggestions">
+                @for (m of sel.suggestedModels; track m) {
+                  <option [value]="m"></option>
+                }
+              </datalist>
+              <span class="field-hint">Suggestions: {{ sel.suggestedModels.join(', ') }}. Any model the provider serves works.</span>
+            </label>
+
+            @if (sel.supportsBaseUrl) {
+              <label>
+                <span>Base URL <span class="muted">(optional)</span></span>
+                <input name="baseUrl" [(ngModel)]="baseUrl" [placeholder]="sel.defaultBaseUrl" autocomplete="off" />
+                <span class="field-hint">
+                  @if (sel.id === 'ollama') {
+                    Where Ollama runs, as seen from the ai-service container (e.g. http://host.docker.internal:11434).
+                  } @else {
+                    Leave empty for {{ sel.defaultBaseUrl }}, or point at an OpenAI-compatible gateway.
+                  }
+                </span>
+              </label>
+            }
+
+            @if (sel.requiresApiKey && !sel.apiKeyConfigured) {
+              <p class="notice warn">
+                This provider needs an API key, which is only read from the server environment
+                (<code>{{ sel.id === 'openai' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY' }}</code>), never stored in the database.
+                Set it and restart ai-service to enable this provider.
+              </p>
+            }
+
+            @if (testResult(); as t) {
+              <p class="notice" [class.ok]="t.ok" [class.bad]="!t.ok" role="status">
+                @if (t.ok) {
+                  ✓ Connected in {{ t.latencyMs }} ms. Model replied: “{{ t.reply }}”
+                } @else {
+                  ✕ Test failed after {{ t.latencyMs }} ms: {{ t.error }}
+                }
+              </p>
+            }
+            @if (formError()) {
+              <p class="notice bad" role="alert">{{ formError() }}</p>
+            }
+            @if (savedMessage()) {
+              <p class="notice ok" role="status">✓ {{ savedMessage() }}</p>
+            }
+
+            <div class="actions">
+              <button type="button" class="btn" (click)="test()" [disabled]="testing() || !usable() || !model.trim()">
+                {{ testing() ? 'Testing…' : 'Test connection' }}
+              </button>
+              <span class="spacer"></span>
+              @if (isDirty()) {
+                <button type="button" class="btn ghost" (click)="reset()">Discard</button>
+              }
+              <button type="submit" class="btn primary" [disabled]="saving() || !usable() || !model.trim() || !isDirty()">
+                {{ saving() ? 'Saving…' : 'Save and apply' }}
+              </button>
+            </div>
+          </form>
+        }
+      </article>
+
+      <aside class="card history">
+        <h2>Change history</h2>
+        @for (h of v.history; track h.changedAt + h.model) {
+          <div class="h-row">
+            <div class="h-what">
+              <strong>{{ providerLabel(h.provider) }}</strong> · <code>{{ h.model }}</code>
+              @if (h.prevProvider) {
+                <div class="h-from">from {{ h.prevProvider }} / {{ h.prevModel }}</div>
+              }
+            </div>
+            <div class="h-meta">{{ h.changedBy }} · {{ h.changedAt | date: 'MMM d, HH:mm' }}</div>
+          </div>
+        } @empty {
+          <p class="muted small">No changes yet. The provider comes from the server defaults.</p>
+        }
+        <p class="footnote">
+          The model only explains decisions; every decision still comes from the DMN engine, and every answer still cites its sources.
+        </p>
+      </aside>
+    </div>
+  }
+</section>

@@ -46,5 +46,18 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.app-title')?.textContent).toContain('DMN Rules Platform');
     expect(compiled.querySelector('.user-name')?.textContent).toContain('Alex Analyst');
+    expect(compiled.querySelector('.admin-link')).toBeNull();
+    expect(compiled.querySelector('.bob-launcher')?.textContent).toContain('Ask Bob');
+  });
+
+  it('shows the Admin link only to an admin', async () => {
+    localStorage.setItem(
+      'dmn-rules-demo.user',
+      JSON.stringify({ username: 'admin', displayName: 'Platform Admin', role: 'admin', token: 't' }),
+    );
+    await setUp();
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.admin-link')?.textContent).toContain('Admin');
   });
 });

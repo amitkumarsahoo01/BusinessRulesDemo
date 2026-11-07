@@ -47,6 +47,16 @@ spring:
 
 rules-ai:
   decision-service-base-url: ${DECISION_SERVICE_URL:http://localhost:8080}
+  # Starting provider/model. Once an admin saves settings in the admin console, the stored
+  # choice (ai_llm_settings) wins over these on every later start.
+  provider: ${AI_PROVIDER:anthropic}
+  model: ${AI_MODEL:}
+  providers:
+    # Keys only ever come from env vars (CLAUDE.md rule 8). Anthropic's is spring.ai.anthropic.api-key above.
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
   max-tool-calls: 8
 
 demo:

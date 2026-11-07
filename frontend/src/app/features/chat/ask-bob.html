@@ -1,0 +1,119 @@
+@if (visible()) {
+  <div class="bob-root" (keydown)="onKeydown($event)">
+    @if (open()) {
+      <section class="bob-panel" role="dialog" aria-label="Ask Bob, the rules assistant">
+        <header class="bob-header">
+          <span class="bob-avatar" aria-hidden="true">B</span>
+          <div class="bob-title">
+            <strong>Ask Bob</strong>
+            <span>Your rules assistant · answers cite versions, rows &amp; executions</span>
+          </div>
+          <button type="button" class="icon-btn" (click)="newChat()" title="Start a new chat" aria-label="Start a new chat">
+            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <button type="button" class="icon-btn" (click)="open.set(false)" title="Close" aria-label="Close Ask Bob">
+            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </header>
+
+        @if (session.context().modelKey || session.context().executionId) {
+          <div class="bob-context">
+            About
+            @if (session.context().modelKey) {
+              <span class="chip">model {{ session.context().modelKey }}</span>
+            }
+            @if (session.context().executionId) {
+              <span class="chip">execution {{ session.context().executionId!.slice(0, 8) }}…</span>
+            }
+          </div>
+        }
+        @if (contextChanged()) {
+          <button type="button" class="bob-context-switch" (click)="newChat()">
+            Start a new chat about
+            {{ pageContext().modelKey ? 'model ' + pageContext().modelKey : 'this execution' }} →
+          </button>
+        }
+
+        <div class="bob-messages" #messageList aria-live="polite">
+          @if (session.messages().length === 0 && !session.sending()) {
+            <div class="bob-welcome">
+              <p>Hi, I'm Bob. Ask me how a rule works, why a decision came out the way it did, or "what if" questions. I check the real rules engine; I never guess.</p>
+              <div class="bob-suggestions">
+                @for (q of session.suggestedQuestions(); track q) {
+                  <button type="button" (click)="ask(q)" [disabled]="!session.conversationId()">{{ q }}</button>
+                }
+              </div>
+            </div>
+          }
+          @for (m of session.messages(); track $index) {
+            <div class="msg" [class.user]="m.role === 'USER'" [class.assistant]="m.role === 'ASSISTANT'">
+              <div class="bubble">
+                @if (m.role === 'ASSISTANT') {
+                  <app-markdown-view [content]="m.content" />
+                } @else {
+                  {{ m.content }}
+                }
+              </div>
+              @if (m.role === 'ASSISTANT' && parseToolCalls(m).length > 0) {
+                <details class="tools">
+                  <summary>How I got this ({{ parseToolCalls(m).length }})</summary>
+                  <ul>
+                    @for (t of parseToolCalls(m); track $index) {
+                      <li><code>{{ t.tool }}</code> {{ t.argsSummary }}</li>
+                    }
+                  </ul>
+                </details>
+              }
+            </div>
+          }
+          @if (session.sending()) {
+            <div class="msg assistant">
+              <div class="bubble">
+                @if (session.streamingText()) {
+                  <app-markdown-view [content]="session.streamingText()" />
+                } @else {
+                  <span class="typing" aria-label="Bob is thinking"><i></i><i></i><i></i></span>
+                }
+              </div>
+            </div>
+          }
+          @if (session.error()) {
+            <p class="bob-error">{{ session.error() }}</p>
+          }
+        </div>
+
+        <form class="bob-composer" (ngSubmit)="send()">
+          <input
+            #composerInput
+            type="text"
+            name="draft"
+            [(ngModel)]="draft"
+            placeholder="Ask Bob…"
+            autocomplete="off"
+            [disabled]="session.sending() || !session.conversationId()"
+          />
+          <button type="submit" class="send" [disabled]="session.sending() || !session.conversationId() || !draft.trim()" aria-label="Send">
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M3 10l14-6-6 14-2-6-6-2z" fill="currentColor"/></svg>
+          </button>
+        </form>
+        <a class="bob-full" routerLink="/ask-ai" [queryParams]="fullChatQuery()" (click)="open.set(false)">Open full chat</a>
+      </section>
+    }
+
+    <button
+      type="button"
+      class="bob-launcher"
+      [class.open]="open()"
+      (click)="toggle()"
+      [attr.aria-expanded]="open()"
+      aria-label="Ask Bob, the rules assistant"
+    >
+      @if (open()) {
+        <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      } @else {
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 016.5 3h11A2.5 2.5 0 0120 5.5v8a2.5 2.5 0 01-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 014 13.5v-8z" fill="currentColor"/></svg>
+        <span>Ask Bob</span>
+      }
+    </button>
+  </div>
+}

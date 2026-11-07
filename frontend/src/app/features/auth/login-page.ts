@@ -45,7 +45,7 @@ export class LoginPage {
     this.auth.login(this.username, this.password).subscribe({
       next: () => {
         this.loading.set(false);
-        this.router.navigateByUrl('/rules');
+        this.router.navigateByUrl('/dashboard');
       },
       error: () => {
         this.loading.set(false);

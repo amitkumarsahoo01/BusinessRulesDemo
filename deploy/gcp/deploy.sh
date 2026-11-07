@@ -65,10 +65,19 @@ if ! secret_exists dmn-anthropic-key; then
   [ -n "${ANTHROPIC_API_KEY:-}" ] || echo "WARNING: ANTHROPIC_API_KEY not set; storing a placeholder (Ask AI will not answer)"
   printf '%s' "${ANTHROPIC_API_KEY:-unset}" | gcloud secrets create dmn-anthropic-key --data-file=-
 fi
+# Admin console password and session-token signing secret. Both must be fixed values here: Cloud Run
+# scales decision-service to zero, and a per-start random value would change the admin password and
+# sign everyone out on every cold start. Read the admin password with:
+#   gcloud secrets versions access latest --secret dmn-admin-password
+for s in dmn-admin-password dmn-auth-token-secret; do
+  if ! secret_exists "$s"; then
+    head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 32 | gcloud secrets create "$s" --data-file=-
+  fi
+done
 # Cloud Run's default compute service account reads the secrets at startup.
 PROJECT_NUMBER="$(gcloud projects describe "$GCP_PROJECT" --format='value(projectNumber)')"
 RUN_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-for s in dmn-db-password dmn-anthropic-key; do
+for s in dmn-db-password dmn-anthropic-key dmn-admin-password dmn-auth-token-secret; do
   gcloud secrets add-iam-policy-binding "$s" --member "serviceAccount:${RUN_SA}" \
     --role roles/secretmanager.secretAccessor >/dev/null
 done
@@ -106,7 +115,7 @@ echo "==> decision-service"
 gcloud run deploy decision-service --image "${REGISTRY}/decision-service:${TAG}" "${COMMON[@]}" \
   --cpu 1 --memory 1Gi --cpu-boost --port 8080 \
   --set-env-vars "SPRING_DATASOURCE_URL=${JDBC},SPRING_DATASOURCE_USERNAME=${DB_USER},RESET_DEMO_ON_START=false,${POOL}" \
-  --set-secrets "SPRING_DATASOURCE_PASSWORD=dmn-db-password:latest"
+  --set-secrets "SPRING_DATASOURCE_PASSWORD=dmn-db-password:latest,DEMO_ADMIN_PASSWORD=dmn-admin-password:latest,AUTH_TOKEN_SECRET=dmn-auth-token-secret:latest"
 DECISION_URL="$(gcloud run services describe decision-service --region "$REGION" --format='value(status.url)')"
 
 echo "==> ai-service"
