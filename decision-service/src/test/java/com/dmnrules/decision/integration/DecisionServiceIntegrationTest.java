@@ -32,6 +32,7 @@ import static org.awaitility.Awaitility.await;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
+@org.springframework.context.annotation.Import(DemoUserBasicAuth.class)
 class DecisionServiceIntegrationTest {
 
     @Container

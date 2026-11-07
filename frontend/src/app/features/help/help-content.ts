@@ -147,7 +147,7 @@ export const ROLE_GUIDES: RoleGuide[] = [
     ],
     limits: [
       'The import panel is hidden for you.',
-      'Do not use editing, approving or publishing buttons; they belong to the other roles.',
+      'Editing, approving and publishing are blocked for your role, in the app and in the REST API.',
     ],
   },
   {

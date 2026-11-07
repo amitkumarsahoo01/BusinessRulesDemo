@@ -55,6 +55,7 @@ class ChatEndToEndTest {
             .withEnv("SPRING_DATASOURCE_URL", "jdbc:postgresql://postgres:5432/dmn_rules")
             .withEnv("SPRING_DATASOURCE_USERNAME", "dmn_rules")
             .withEnv("SPRING_DATASOURCE_PASSWORD", "dmn_rules")
+            .withEnv("AI_SERVICE_PASSWORD", "test-service-password")
             .waitingFor(Wait.forHttp("/api/health").forStatusCode(200).withStartupTimeout(Duration.ofSeconds(90)));
 
     @DynamicPropertySource
@@ -62,6 +63,7 @@ class ChatEndToEndTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("rules-ai.decision-service-password", () -> "test-service-password");
         registry.add("rules-ai.decision-service-base-url",
                 () -> "http://" + decisionService.getHost() + ":" + decisionService.getMappedPort(8080));
         registry.add("spring.ai.anthropic.api-key", () -> System.getenv("ANTHROPIC_API_KEY"));
@@ -85,7 +87,7 @@ class ChatEndToEndTest {
 
     private String ask(String content, String pinnedModelKey, String pinnedVersion, String pinnedExecutionId) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-User", "analyst");
+        headers.setBasicAuth("analyst", "demo");
         var start = restTemplate.exchange("/api/ai/conversations", HttpMethod.POST,
                 new HttpEntity<>(new com.dmnrules.ai.api.StartConversationRequest(pinnedModelKey, pinnedVersion, pinnedExecutionId), headers),
                 com.dmnrules.ai.api.StartConversationResponse.class);

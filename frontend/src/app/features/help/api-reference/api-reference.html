@@ -1,0 +1,109 @@
+<div class="api-ref">
+  <div class="card intro-card">
+    <h2>Decision engine REST API</h2>
+    <p>
+      Everything the app does goes through this JSON API, so you can call it from scripts, Postman or other systems.
+      Errors are <code>application/problem+json</code>.
+    </p>
+    <div class="base-url">
+      <span class="label">Base URL</span>
+      <code>{{ baseUrl }}</code>
+      <button type="button" class="copy" (click)="copy('base', baseUrl)">{{ copied() === 'base' ? 'Copied' : 'Copy' }}</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Authentication</h2>
+    <p>
+      Every <code>/api</code> call needs credentials, except login and health. Use <strong>HTTP Basic</strong> with a
+      username and password (<code>curl -u user:password</code>), or a <strong>Bearer token</strong> from
+      <code>POST /api/auth/login</code>. The caller recorded in the audit trail is always the authenticated account;
+      an <code>X-User</code> header is ignored.
+    </p>
+    <table class="data-table accounts">
+      <thead>
+        <tr><th>Account</th><th>Password</th><th>Can do</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>analyst</code></td><td><code>demo</code></td><td>Everything a rule author can: evaluate, read, create and test drafts</td></tr>
+        <tr><td><code>approver</code></td><td><code>demo</code></td><td>Rule approver: approve and publish (not their own drafts)</td></tr>
+        <tr><td><code>auditor</code></td><td><code>demo</code></td><td>Read-only: evaluate, simulate and read</td></tr>
+        <tr>
+          <td><code>api-client</code></td>
+          <td>Set by the operator (<code>API_CLIENT_PASSWORD</code>)</td>
+          <td>For integrations: evaluate, simulate and read only. Cannot sign in to the web app.</td>
+        </tr>
+        <tr><td><code>admin</code></td><td>Set by the operator</td><td>Admin console; also a normal API user</td></tr>
+      </tbody>
+    </table>
+    <ul class="status-codes">
+      <li><code>401</code> missing or wrong credentials</li>
+      <li><code>403</code> the account may not call this endpoint (e.g. auditor or api-client changing rules)</li>
+      <li><code>409</code> lifecycle rule broken (e.g. approving your own draft)</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Examples</h2>
+    @for (ex of examples; track ex.id) {
+      <div class="example">
+        <div class="example-head">
+          <h3>{{ ex.title }}</h3>
+          <button type="button" class="copy" (click)="copy(ex.id, ex.command)">{{ copied() === ex.id ? 'Copied' : 'Copy' }}</button>
+        </div>
+        <pre><code>{{ ex.command }}</code></pre>
+      </div>
+    }
+  </div>
+
+  <div class="card">
+    <div class="endpoints-head">
+      <h2>Endpoints <span class="count">{{ endpointCount }}</span></h2>
+      <input
+        type="search"
+        placeholder="Filter, e.g. evaluate or executions"
+        aria-label="Filter endpoints"
+        [value]="filter()"
+        (input)="filter.set($any($event.target).value)"
+      />
+    </div>
+    <p class="legend">
+      @for (a of accessLevels; track a) {
+        <span class="access access-{{ a }}">{{ accessLabels[a] }}</span>
+        <span class="legend-text">{{ accessHelp[a] }}</span>
+      }
+    </p>
+
+    @for (g of filteredGroups(); track g.title) {
+      <section class="group">
+        <h3>{{ g.title }}</h3>
+        @if (g.description) {
+          <p class="group-desc">{{ g.description }}</p>
+        }
+        @for (e of g.endpoints; track e.method + e.path) {
+          <details class="endpoint">
+            <summary>
+              <span class="method method-{{ e.method.toLowerCase() }}">{{ e.method }}</span>
+              <code class="path">{{ e.path }}</code>
+              <span class="access access-{{ e.access }}">{{ accessLabels[e.access] }}</span>
+              <span class="ep-summary">{{ e.summary }}</span>
+            </summary>
+            <div class="ep-body">
+              <p>{{ e.summary }}</p>
+              @if (e.details?.length) {
+                <ul>
+                  @for (d of e.details; track d) {
+                    <li><code>{{ d }}</code></li>
+                  }
+                </ul>
+              }
+              <p class="access-note">{{ accessHelp[e.access] }}</p>
+            </div>
+          </details>
+        }
+      </section>
+    } @empty {
+      <p class="empty">No endpoint matches “{{ filter() }}”.</p>
+    }
+  </div>
+</div>

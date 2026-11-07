@@ -120,6 +120,14 @@ Demo users (password `demo` for all, shown on login page):
 - Accept: only the admin can open the console or call its API (forged `X-User` rejected); switching provider changes who answers the next question without a restart.
   - Verified: decision-service 45 tests (new: `DashboardAndAuthIntegrationTest`, `TokenServiceTest`, `DashboardServiceTest`), ai-service 29 tests incl. `AdminLlmControllerTest` against a real decision-service container (admin 200 / analyst 403 / no token, garbage token and forged `X-User: admin` 401 / provider without key refused) and `LlmRouterTest`; frontend 42 tests. Live via `docker compose` in Chrome: dashboard renders the seeded 318 executions, Ask Bob opens and pins `model loan-eligibility` on a rule page, admin console tested and switched to a host Ollama (`llama3.2`), Ask Bob then answered through it with a tool call, and the choice survived an ai-service restart. Not verified: OpenAI/Anthropic answering after a switch (no spend on real keys), Cloud Run redeploy with the new secrets.
 
+### M11 — REST API authentication and API reference
+- [x] Every `/api` call needs credentials (except `POST /api/auth/login` and `GET /api/health`): HTTP Basic (`username:password`) or the Bearer token from login. The verified identity replaces any `X-User` header, so audit callers and four-eyes approval can no longer be spoofed.
+- [x] Accounts: demo users with their own passwords, `admin`, and a new `api-client` integration account (`API_CLIENT_PASSWORD`; evaluate, simulate and read only; cannot sign in to the web app). `auditor` is now read-only on the server too, not just in the UI.
+- [x] ai-service calls decision-service with its own `ai-service` service account (`AI_SERVICE_PASSWORD`, shared by both services) and passes the signed-in user, whose role still applies. Chat endpoints require a verified user (token or Basic) instead of trusting `X-User`.
+- [x] Help → REST API tab: authentication, accounts, copyable curl examples using the site's own URL, and all 29 endpoints with access level, filterable.
+- Accept: no credentials / wrong password / `X-User` alone → 401; api-client or auditor changing rules → 403; recorded caller is the authenticated account; the web app and Ask Bob keep working.
+  - Verified: decision-service 54 tests (new `ApiBasicAuthIntegrationTest`, 9 cases), ai-service 30 tests (chat endpoints reject missing/forged identity; tools reach decision-service through the service account), frontend 54 tests. Live on the local compose stack through nginx with curl (every case above) and in Chrome: a pre-existing session is sent back to the login page without a browser password prompt, sign-in lands on the dashboard, and Help → REST API renders with working examples.
+
 ## Demo script (5 minutes)
 1. Login as analyst → Rules → open loan-eligibility → show decision table and annotations.
 2. Ask AI: "Explain this model" → plain-English answer with row citations.

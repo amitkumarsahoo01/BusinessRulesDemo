@@ -1,8 +1,19 @@
 <section class="page help-page">
   <div class="page-head">
-    <h1>User guide</h1>
+    <h1>Help</h1>
+    <div class="help-tabs" role="tablist" aria-label="Help sections">
+      <button type="button" role="tab" [class.active]="tab() === 'guide'" [attr.aria-selected]="tab() === 'guide'" (click)="showTab('guide')">
+        User guide
+      </button>
+      <button type="button" role="tab" [class.active]="tab() === 'api'" [attr.aria-selected]="tab() === 'api'" (click)="showTab('api')">
+        REST API
+      </button>
+    </div>
   </div>
 
+  @if (tab() === 'api') {
+    <app-api-reference />
+  } @else {
   <p class="intro">
     Rules move through a controlled path before they go live. Each role handles different steps.
   </p>
@@ -65,7 +76,9 @@
     <p>
       <a routerLink="/dashboard">Dashboard</a> ·
       <a routerLink="/rules">Go to Rules</a> ·
-      <a routerLink="/audit">Audit</a>
+      <a routerLink="/audit">Audit</a> ·
+      <a routerLink="/help" [queryParams]="{ tab: 'api' }">REST API</a>
     </p>
   </div>
+  }
 </section>

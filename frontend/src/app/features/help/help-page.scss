@@ -3,6 +3,43 @@
   color: var(--color-muted);
 }
 
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.page-head h1 {
+  margin: 0 !important;
+}
+
+.help-tabs {
+  display: inline-flex;
+  background: #e5e7eb;
+  border-radius: 9px;
+  padding: 3px;
+}
+
+.help-tabs button {
+  border: none;
+  background: transparent;
+  padding: 0.4rem 0.9rem;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.help-tabs button.active {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
 .lifecycle {
   display: flex;
   flex-wrap: wrap;

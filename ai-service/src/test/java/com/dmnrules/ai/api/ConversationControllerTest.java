@@ -56,6 +56,7 @@ class ConversationControllerTest {
             .withEnv("SPRING_DATASOURCE_URL", "jdbc:postgresql://postgres:5432/dmn_rules")
             .withEnv("SPRING_DATASOURCE_USERNAME", "dmn_rules")
             .withEnv("SPRING_DATASOURCE_PASSWORD", "dmn_rules")
+            .withEnv("AI_SERVICE_PASSWORD", "test-service-password")
             .waitingFor(Wait.forHttp("/api/health").forStatusCode(200).withStartupTimeout(Duration.ofSeconds(90)));
 
     @DynamicPropertySource
@@ -63,6 +64,7 @@ class ConversationControllerTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("rules-ai.decision-service-password", () -> "test-service-password");
         registry.add("rules-ai.decision-service-base-url",
                 () -> "http://" + decisionService.getHost() + ":" + decisionService.getMappedPort(8080));
         registry.add("spring.ai.anthropic.api-key", () -> "placeholder-not-a-real-key-unused-in-this-test");
@@ -79,7 +81,7 @@ class ConversationControllerTest {
 
     private ResponseEntity<StartConversationResponse> startConversation(StartConversationRequest request) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-User", "analyst");
+        headers.setBasicAuth("analyst", "demo");
         return restTemplate.exchange("/api/ai/conversations", HttpMethod.POST,
                 new HttpEntity<>(request, headers), StartConversationResponse.class);
     }
@@ -105,7 +107,7 @@ class ConversationControllerTest {
         String conversationId = startConversation(new StartConversationRequest(null, null, null))
                 .getBody().conversationId();
 
-        ResponseEntity<String> response = restTemplate.getForEntity(
+        ResponseEntity<String> response = restTemplate.withBasicAuth("analyst", "demo").getForEntity(
                 "/api/ai/conversations/" + conversationId + "/messages", String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("[]");
@@ -113,9 +115,22 @@ class ConversationControllerTest {
 
     @Test
     void history_forUnknownConversation_returns404ProblemJson() {
-        ResponseEntity<String> response = restTemplate.getForEntity(
+        ResponseEntity<String> response = restTemplate.withBasicAuth("analyst", "demo").getForEntity(
                 "/api/ai/conversations/" + UUID.randomUUID() + "/messages", String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(response.getHeaders().getContentType().toString()).contains("application/problem+json");
+    }
+
+    @Test
+    void chatEndpointsRejectMissingCredentialsAndForgedXUser() {
+        HttpHeaders forged = new HttpHeaders();
+        forged.set("X-User", "analyst");
+        ResponseEntity<String> withForgedHeader = restTemplate.exchange("/api/ai/conversations", HttpMethod.POST,
+                new HttpEntity<>(new StartConversationRequest(null, null, null), forged), String.class);
+        assertThat(withForgedHeader.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        assertThat(restTemplate.withBasicAuth("analyst", "wrong")
+                .getForEntity("/api/ai/conversations/" + UUID.randomUUID() + "/messages", String.class)
+                .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 }

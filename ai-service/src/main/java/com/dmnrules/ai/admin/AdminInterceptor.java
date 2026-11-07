@@ -10,12 +10,15 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Guards every {@code /api/ai/admin/**} endpoint in one place, so a new admin endpoint cannot be
- * added without the check. The verified admin is exposed to handlers as a request attribute.
+ * Authenticates every {@code /api/ai/**} call in one place (Bearer token or HTTP Basic, verified by
+ * decision-service), and additionally requires the admin role under {@code /api/ai/admin/**}. The
+ * verified user is exposed to handlers as request attributes, so no endpoint can be added without
+ * the check and none reads a self-declared {@code X-User}.
  */
 @Configuration
 public class AdminInterceptor implements HandlerInterceptor, WebMvcConfigurer {
 
+    public static final String USER_ATTRIBUTE = "com.dmnrules.ai.auth.verifiedUser";
     public static final String ADMIN_ATTRIBUTE = "com.dmnrules.ai.admin.verifiedAdmin";
 
     // Resolved per request rather than injected directly: @WebMvcTest slices load WebMvcConfigurers
@@ -28,12 +31,18 @@ public class AdminInterceptor implements HandlerInterceptor, WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(this).addPathPatterns("/api/ai/admin/**");
+        registry.addInterceptor(this).addPathPatterns("/api/ai/**");
     }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        request.setAttribute(ADMIN_ATTRIBUTE, authorizer.getObject().requireAdmin(request.getHeader(HttpHeaders.AUTHORIZATION)));
+        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        AdminAuthorizer.VerifiedUser user = path.startsWith("/api/ai/admin/")
+                ? authorizer.getObject().requireAdmin(authorization)
+                : authorizer.getObject().requireUser(authorization);
+        request.setAttribute(USER_ATTRIBUTE, user);
+        request.setAttribute(ADMIN_ATTRIBUTE, user);
         return true;
     }
 }

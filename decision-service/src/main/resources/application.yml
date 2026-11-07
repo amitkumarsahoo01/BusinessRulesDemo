@@ -28,6 +28,10 @@ demo:
     token-ttl: PT12H
     # Password for the 'admin' account (admin console). Blank = random, logged once at startup.
     admin-password: ${DEMO_ADMIN_PASSWORD:}
+    # 'api-client' account for integrations using HTTP Basic auth. Blank = random, logged once.
+    api-client-password: ${API_CLIENT_PASSWORD:}
+    # 'ai-service' internal account; must equal ai-service's AI_SERVICE_PASSWORD.
+    service-password: ${AI_SERVICE_PASSWORD:}
 
 management:
   endpoints:

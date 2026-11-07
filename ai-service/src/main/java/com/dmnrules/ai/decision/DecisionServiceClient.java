@@ -18,8 +18,24 @@ public class DecisionServiceClient {
 
     private final RestClient restClient;
 
-    public DecisionServiceClient(@Value("${rules-ai.decision-service-base-url}") String baseUrl) {
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+    /**
+     * Calls decision-service as the internal {@code ai-service} account (HTTP Basic). Where a call
+     * acts for the signed-in user (e.g. proposeChange creating a draft), it also sends {@code X-User},
+     * which decision-service honours only for service accounts.
+     */
+    public DecisionServiceClient(
+            @Value("${rules-ai.decision-service-base-url}") String baseUrl,
+            @Value("${rules-ai.decision-service-username:ai-service}") String username,
+            @Value("${rules-ai.decision-service-password:}") String password) {
+        this.restClient = RestClient.builder()
+                .baseUrl(baseUrl)
+                .defaultHeaders(h -> {
+                    if (password != null && !password.isBlank()) {
+                        h.setBasicAuth(username, password, java.nio.charset.StandardCharsets.UTF_8);
+                    }
+                    h.set("X-Requested-With", "XMLHttpRequest");
+                })
+                .build();
     }
 
     public List<ModelSummary> listModels() {

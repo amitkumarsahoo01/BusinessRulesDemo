@@ -50,6 +50,7 @@ class RuleToolsIntegrationTest {
             .withEnv("SPRING_DATASOURCE_URL", "jdbc:postgresql://postgres:5432/dmn_rules")
             .withEnv("SPRING_DATASOURCE_USERNAME", "dmn_rules")
             .withEnv("SPRING_DATASOURCE_PASSWORD", "dmn_rules")
+            .withEnv("AI_SERVICE_PASSWORD", "test-service-password")
             .waitingFor(Wait.forHttp("/api/health").forStatusCode(200).withStartupTimeout(Duration.ofSeconds(90)));
 
     @DynamicPropertySource
@@ -57,6 +58,7 @@ class RuleToolsIntegrationTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("rules-ai.decision-service-password", () -> "test-service-password");
         registry.add("rules-ai.decision-service-base-url",
                 () -> "http://" + decisionService.getHost() + ":" + decisionService.getMappedPort(8080));
         registry.add("spring.ai.anthropic.api-key", () -> "placeholder-not-a-real-key-unused-in-this-test");

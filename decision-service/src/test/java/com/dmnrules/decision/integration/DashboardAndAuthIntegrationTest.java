@@ -27,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /** Dashboard aggregates over the real seeded executions, and the admin account / token flow. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
+@org.springframework.context.annotation.Import(DemoUserBasicAuth.class)
 class DashboardAndAuthIntegrationTest {
 
     @Container

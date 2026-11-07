@@ -47,6 +47,10 @@ spring:
 
 rules-ai:
   decision-service-base-url: ${DECISION_SERVICE_URL:http://localhost:8080}
+  # ai-service's own credential for decision-service's API (HTTP Basic). Must match decision-service's
+  # AI_SERVICE_PASSWORD; without it the chat tools and document seeding get 401.
+  decision-service-username: ai-service
+  decision-service-password: ${AI_SERVICE_PASSWORD:}
   # Starting provider/model. Once an admin saves settings in the admin console, the stored
   # choice (ai_llm_settings) wins over these on every later start.
   provider: ${AI_PROVIDER:anthropic}

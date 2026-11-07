@@ -25,6 +25,10 @@ services:
       # Admin console account password and session-token signing secret (blank = random per start).
       DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-}
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-}
+      # Password for the 'api-client' integration account (HTTP Basic). Blank = random, printed once in the log.
+      API_CLIENT_PASSWORD: ${API_CLIENT_PASSWORD:-}
+      # ai-service's own credential for this API; must be the same value on both services.
+      AI_SERVICE_PASSWORD: ${AI_SERVICE_PASSWORD:?Set AI_SERVICE_PASSWORD in deploy/.env (any long random string)}
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,6 +51,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      AI_SERVICE_PASSWORD: ${AI_SERVICE_PASSWORD:?Set AI_SERVICE_PASSWORD in deploy/.env (any long random string)}
       RESET_DEMO_ON_START: ${RESET_DEMO_ON_START:-true}
     depends_on:
       postgres:

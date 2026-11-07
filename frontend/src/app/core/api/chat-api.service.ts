@@ -1,11 +1,14 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ChatMessage, StartConversationRequest } from '../models/chat.models';
 
 @Injectable({ providedIn: 'root' })
 export class ChatApiService {
+  private readonly router = inject(Router);
+
   constructor(
     private readonly http: HttpClient,
     private readonly auth: AuthService,
@@ -21,16 +24,26 @@ export class ChatApiService {
 
   /**
    * Streams the assistant's reply token-by-token. Uses fetch() with a manual SSE line parser
-   * (not the native EventSource) because sending a POST body and an X-User header isn't possible
-   * with EventSource, which only supports GET with no custom headers.
+   * (not the native EventSource) because sending a POST body and an Authorization header isn't
+   * possible with EventSource, which only supports GET with no custom headers. fetch() bypasses the
+   * HTTP interceptor, so the same headers are set here.
    */
   async *streamMessage(conversationId: string, content: string): AsyncGenerator<string, void, unknown> {
-    const username = this.auth.currentUser()?.username ?? 'anonymous';
+    const token = this.auth.currentUser()?.token;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     const response = await fetch(`/api/ai/conversations/${conversationId}/messages`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-User': username },
+      headers,
       body: JSON.stringify({ content }),
     });
+    if (response.status === 401) {
+      this.auth.logout();
+      void this.router.navigateByUrl('/login');
+      throw new Error('Session expired');
+    }
     if (!response.ok || !response.body) {
       throw new Error(`Chat request failed: ${response.status}`);
     }

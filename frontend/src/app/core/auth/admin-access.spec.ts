@@ -48,7 +48,7 @@ describe('adminGuard', () => {
 });
 
 describe('userHeaderInterceptor', () => {
-  it('sends X-User and the bearer token to /api only', () => {
+  it('sends the bearer token (not a self-declared X-User) to /api only', () => {
     storeUser({ username: 'admin', displayName: 'Admin', role: 'admin', token: 'signed.token' });
     setUp();
     const http = TestBed.inject(HttpClient);
@@ -58,9 +58,33 @@ describe('userHeaderInterceptor', () => {
     http.get('https://example.com/elsewhere').subscribe();
 
     const api = mock.expectOne('/api/ai/admin/llm');
-    expect(api.request.headers.get('X-User')).toBe('admin');
     expect(api.request.headers.get('Authorization')).toBe('Bearer signed.token');
+    expect(api.request.headers.get('X-Requested-With')).toBe('XMLHttpRequest');
+    expect(api.request.headers.has('X-User')).toBe(false);
     const external = mock.expectOne('https://example.com/elsewhere');
     expect(external.request.headers.has('Authorization')).toBe(false);
+  });
+
+  it('signs out and goes to login when the server says the session is invalid', () => {
+    storeUser({ username: 'analyst', displayName: 'Alex', role: 'rule-author' }); // pre-token session
+    setUp();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    TestBed.inject(HttpClient).get('/api/models').subscribe({ error: () => undefined });
+    TestBed.inject(HttpTestingController).expectOne('/api/models').flush(null, { status: 401, statusText: 'Unauthorized' });
+
+    expect(localStorage.getItem('dmn-rules-demo.user')).toBeNull();
+    expect(navigate).toHaveBeenCalledWith('/login');
+  });
+
+  it('does not sign out on a failed login attempt', () => {
+    storeUser(null);
+    setUp();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    TestBed.inject(HttpClient).post('/api/auth/login', {}).subscribe({ error: () => undefined });
+    TestBed.inject(HttpTestingController).expectOne('/api/auth/login').flush(null, { status: 401, statusText: 'Unauthorized' });
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

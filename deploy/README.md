@@ -29,6 +29,10 @@ open to the internet.
      blank a random one is printed once in the decision-service log on each start.
    - `AUTH_TOKEN_SECRET` — any long random string; signs session tokens. Blank works for a single
      instance but signs everyone out on restart.
+   - `API_CLIENT_PASSWORD` — password for the `api-client` account that integrations use with HTTP
+     Basic auth (evaluate, simulate, read-only). Blank prints a random one in the log on each start.
+   - `AI_SERVICE_PASSWORD` — **required**: any long random string; ai-service's own credential for
+     decision-service's API (both services read it).
    - `RESET_DEMO_ON_START` — leave at `true` for a public demo so it always comes back clean after
      a restart; set `false` on a VM where you want manually authored drafts/approvals to survive a
      restart.
