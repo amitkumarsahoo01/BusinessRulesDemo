@@ -1,5 +1,6 @@
 import { DatePipe, JsonPipe } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { AskBobLauncher } from '../chat/ask-bob-launcher';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ExecutionsApiService } from '../../core/api/executions-api.service';
 import { ExecutionDetail } from '../../core/models/audit.models';
@@ -15,6 +16,8 @@ export class ExecutionDetailPage implements OnInit {
   readonly execution = signal<ExecutionDetail | null>(null);
   readonly loading = signal(true);
   readonly notFound = signal(false);
+
+  private readonly askBob = inject(AskBobLauncher);
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -36,10 +39,10 @@ export class ExecutionDetailPage implements OnInit {
     });
   }
 
+  /** Bob pins this execution automatically from the URL (/audit/:id). */
   askAiAboutThis(): void {
-    const execution = this.execution();
-    if (execution) {
-      this.router.navigate(['/ask-ai'], { queryParams: { executionId: execution.id } });
+    if (this.execution()) {
+      this.askBob.open();
     }
   }
 }

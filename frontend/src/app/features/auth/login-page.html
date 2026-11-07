@@ -3,12 +3,33 @@
     <h1>DMN Rules Platform</h1>
     <p class="subtitle">Sign in to continue</p>
 
+    <span class="group-label">Demo accounts</span>
     <div class="demo-accounts">
       @for (account of demoAccounts; track account.username) {
-        <button type="button" class="account-chip" (click)="selectAccount(account.username)">
+        <button
+          type="button"
+          class="account-chip"
+          [class.selected]="selected() === account.username"
+          (click)="selectAccount(account)"
+        >
           {{ account.label }}
         </button>
       }
+    </div>
+
+    <span class="group-label">Administration</span>
+    <div class="demo-accounts">
+      <button
+        type="button"
+        class="account-chip admin"
+        [class.selected]="selected() === adminAccount.username"
+        (click)="selectAccount(adminAccount)"
+      >
+        <svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true">
+          <path d="M10 2l6 2.5v4.6c0 3.9-2.6 7.2-6 8.4-3.4-1.2-6-4.5-6-8.4V4.5L10 2z" fill="currentColor" />
+        </svg>
+        {{ adminAccount.label }}
+      </button>
     </div>
 
     <label>
@@ -17,7 +38,14 @@
     </label>
     <label>
       Password
-      <input type="password" name="password" [(ngModel)]="password" autocomplete="current-password" required />
+      <input
+        #passwordInput
+        type="password"
+        name="password"
+        [(ngModel)]="password"
+        autocomplete="current-password"
+        required
+      />
     </label>
 
     @if (error()) {
@@ -28,6 +56,13 @@
       {{ loading() ? 'Signing in…' : 'Sign in' }}
     </button>
 
-    <p class="hint">Demo password for all accounts is <code>demo</code>.</p>
+    @if (isAdminSelected()) {
+      <p class="hint">
+        The administrator uses its own password, set by whoever runs the platform. It opens the Admin console
+        (LLM provider settings).
+      </p>
+    } @else {
+      <p class="hint">Demo password for the demo accounts is <code>demo</code>.</p>
+    }
   </form>
 </div>

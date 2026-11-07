@@ -47,6 +47,8 @@ describe('App', () => {
     expect(compiled.querySelector('.app-title')?.textContent).toContain('DMN Rules Platform');
     expect(compiled.querySelector('.user-name')?.textContent).toContain('Alex Analyst');
     expect(compiled.querySelector('.admin-link')).toBeNull();
+    const navLabels = Array.from(compiled.querySelectorAll('.app-nav a')).map((a) => a.textContent?.trim());
+    expect(navLabels).toEqual(['Dashboard', 'Rules', 'Audit', 'Help']);
     expect(compiled.querySelector('.bob-launcher')?.textContent).toContain('Ask Bob');
   });
 

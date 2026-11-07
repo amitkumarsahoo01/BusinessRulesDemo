@@ -113,7 +113,7 @@ export const ROLE_GUIDES: RoleGuide[] = [
       },
       {
         title: 'Investigate decisions',
-        where: 'Audit and Ask AI',
+        where: 'Audit, then Ask Bob (bottom-right)',
         detail: 'Search past executions and open one to see which rows matched and why.',
       },
     ],
@@ -141,7 +141,7 @@ export const ROLE_GUIDES: RoleGuide[] = [
       },
       {
         title: 'Ask questions about the rules',
-        where: 'Ask AI',
+        where: 'Ask Bob (bottom-right on every page)',
         detail: 'Ask in plain English. Answers cite the model version, decision, row numbers and execution IDs, and are read-only.',
       },
     ],
@@ -153,7 +153,7 @@ export const ROLE_GUIDES: RoleGuide[] = [
   {
     role: 'admin',
     label: 'Administrator',
-    summary: 'You choose which language model powers Ask AI and Ask Bob. You do not author or approve rules.',
+    summary: 'You choose which language model powers Ask Bob. You do not author or approve rules.',
     steps: [
       {
         title: 'Check what is active',

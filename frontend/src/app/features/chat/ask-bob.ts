@@ -1,10 +1,11 @@
-import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { ChatApiService } from '../../core/api/chat-api.service';
 import { MarkdownView } from '../../shared/markdown-view/markdown-view';
+import { AskBobLauncher } from './ask-bob-launcher';
 import { ChatContext, ChatSession } from './chat-session';
 
 /** Reads the page's subject from the URL: /rules/:modelKey pins a model, /audit/:id an execution. */
@@ -65,6 +66,17 @@ export class AskBob {
   private readonly input = viewChild<ElementRef<HTMLInputElement>>('composerInput');
 
   constructor() {
+    // Open when another page asks (e.g. the audit page's "Ask Bob about this execution").
+    const launcher = inject(AskBobLauncher);
+    let seen = launcher.openRequests();
+    effect(() => {
+      const requested = launcher.openRequests();
+      if (requested !== seen) {
+        seen = requested;
+        untracked(() => this.openForCurrentPage());
+      }
+    });
+
     // Keep the newest message in view while streaming.
     effect(() => {
       this.session.messages();
@@ -85,6 +97,18 @@ export class AskBob {
       }
       queueMicrotask(() => this.input()?.nativeElement.focus());
     }
+  }
+
+  /** Opens the panel about this page, starting a fresh chat if the current one is about something else. */
+  private openForCurrentPage(): void {
+    const page = this.pageContext();
+    const current = this.session.context();
+    const sameSubject = page.modelKey === current.modelKey && page.executionId === current.executionId;
+    if (this.session.conversationId() === null || !sameSubject) {
+      this.session.start(page);
+    }
+    this.open.set(true);
+    queueMicrotask(() => this.input()?.nativeElement.focus());
   }
 
   newChat(): void {

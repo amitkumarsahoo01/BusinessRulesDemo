@@ -51,6 +51,38 @@ h1 {
   border-color: #6366f1;
 }
 
+.account-chip.selected {
+  background: #eef2ff;
+  border-color: #4f46e5;
+  color: #3730a3;
+  font-weight: 600;
+}
+
+.account-chip.admin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #9a3412;
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.account-chip.admin:hover,
+.account-chip.admin.selected {
+  background: #ffedd5;
+  border-color: #ea580c;
+  color: #7c2d12;
+}
+
+.group-label {
+  margin-bottom: -0.45rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
 label {
   display: flex;
   flex-direction: column;
