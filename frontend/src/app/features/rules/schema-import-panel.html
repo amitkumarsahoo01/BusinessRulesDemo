@@ -1,0 +1,108 @@
+<section class="schema-import card" aria-label="Import JSON Schema">
+  <header>
+    <h2>Import data types from a JSON Schema</h2>
+    <button type="button" class="btn ghost close" (click)="closed.emit()" aria-label="Close">✕</button>
+  </header>
+  <p class="hint">
+    Objects become structures, arrays become lists, and <code>enum</code> / <code>minimum</code> / <code>maximum</code>
+    become allowed values. Local <code>$defs</code> become named types. The types are added to the draft; the published
+    version is not changed.
+  </p>
+
+  <div class="grid">
+    <label class="schema">
+      <span>JSON Schema</span>
+      <textarea name="schema" rows="12" spellcheck="false" [(ngModel)]="schemaText" (ngModelChange)="invalidate()"
+        placeholder='{ "title": "Applicant", "type": "object", "properties": { "age": { "type": "integer", "minimum": 18 } } }'></textarea>
+      <span class="file">or <input type="file" accept=".json,application/json,application/schema+json" (change)="onFile($event)"
+          aria-label="Schema file" /></span>
+    </label>
+
+    <div class="options">
+      <label>
+        <span>Name for the top-level type <span class="muted">(optional)</span></span>
+        <input name="rootName" [(ngModel)]="rootName" (ngModelChange)="invalidate()" placeholder="defaults to the schema title"
+          autocomplete="off" />
+      </label>
+      <label class="check">
+        <input type="checkbox" name="createInputs" [(ngModel)]="createInputs" (ngModelChange)="invalidate()" />
+        Also create an input data node for each top-level property
+      </label>
+      <label class="check">
+        <!-- Replacing only decides whether name clashes are allowed, so it keeps the preview. -->
+        <input type="checkbox" name="replaceExisting" [(ngModel)]="replaceExisting" />
+        Replace existing types with the same name
+      </label>
+      <div class="actions">
+        <button type="button" class="btn" (click)="runPreview()" [disabled]="busy() !== null">
+          {{ busy() === 'preview' ? 'Checking…' : 'Preview' }}
+        </button>
+        @if (preview(); as p) {
+          <button type="button" class="btn primary" (click)="runImport()"
+            [disabled]="busy() !== null || blockedByConflicts(p)">
+            {{ busy() === 'import' ? 'Importing…' : 'Import ' + p.types.length + ' type' + (p.types.length === 1 ? '' : 's') + ' into draft' }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="notice bad" role="alert">{{ error() }}</p>
+  }
+
+  @if (preview(); as p) {
+    <div class="preview" data-testid="schema-preview">
+      <p class="muted small">
+        Based on v{{ p.baseVersion }}. Importing updates the draft in progress, or creates a new draft from the published version.
+      </p>
+      @if (p.conflicts.length) {
+        <p class="notice" [class.bad]="!replaceExisting" role="status">
+          Already in the model: <strong>{{ p.conflicts.join(', ') }}</strong>.
+          {{ replaceExisting ? 'They will be replaced.' : 'Tick "Replace existing types" to overwrite them, or rename them in the schema.' }}
+        </p>
+      }
+      <ul class="types">
+        @for (t of p.types; track t.name) {
+          <li>
+            <strong>{{ t.name }}</strong> <span class="kind">{{ describe(t) }}</span>
+            @if (t.allowedValues) { <code class="allowed">{{ t.allowedValues }}</code> }
+            <ng-container *ngTemplateOutlet="fields; context: { $implicit: t.components }"></ng-container>
+          </li>
+        }
+      </ul>
+      @if (p.inputs.length || p.skippedInputs.length) {
+        <p class="small">
+          @if (p.inputs.length) {
+            New input data nodes: <strong>{{ p.inputs.join(', ') }}</strong>. They appear in the editor's DRG nodes panel; drag them onto the diagram.
+          }
+          @if (p.skippedInputs.length) {
+            <span class="muted">Skipped (name already used): {{ p.skippedInputs.join(', ') }}.</span>
+          }
+        </p>
+      }
+      @if (p.warnings.length) {
+        <details class="warnings" open>
+          <summary>{{ p.warnings.length }} note{{ p.warnings.length === 1 ? '' : 's' }}: parts of the schema DMN cannot express</summary>
+          <ul>
+            @for (w of p.warnings; track $index) { <li>{{ w }}</li> }
+          </ul>
+        </details>
+      }
+    </div>
+  }
+</section>
+
+<ng-template #fields let-items>
+  @if (items.length) {
+    <ul>
+      @for (f of items; track f.name) {
+        <li>
+          {{ f.name }} <span class="kind">{{ describe(f) }}</span>
+          @if (f.allowedValues) { <code class="allowed">{{ f.allowedValues }}</code> }
+          <ng-container *ngTemplateOutlet="fields; context: { $implicit: f.components }"></ng-container>
+        </li>
+      }
+    </ul>
+  }
+</ng-template>

@@ -52,6 +52,12 @@
         <button type="button" class="btn ghost" (click)="undo()" [disabled]="readOnly()" title="Undo">↶</button>
         <button type="button" class="btn ghost" (click)="redo()" [disabled]="readOnly()" title="Redo">↷</button>
         <button type="button" class="btn" (click)="download()">Download .dmn</button>
+        @if (!readOnly() && !isNew()) {
+          <button type="button" class="btn" (click)="showSchemaImport.set(!showSchemaImport())" [disabled]="!canImportSchema()"
+            [title]="dirty() ? 'Save or discard your changes first' : 'Add data types from a JSON Schema'">
+            Import JSON Schema
+          </button>
+        }
         @if (!readOnly()) {
           @if (isDraft() && !isNew()) {
             <button type="button" class="btn" (click)="validate()" [disabled]="validating() || dirty()"
@@ -78,6 +84,10 @@
         <span class="dirty" role="status">● Unsaved changes</span>
       }
     </div>
+  }
+
+  @if (showSchemaImport() && version(); as v) {
+    <app-schema-import-panel [modelKey]="v.modelKey" (imported)="onSchemaImported($event)" (closed)="showSchemaImport.set(false)" />
   }
 
   @if (readOnly()) {

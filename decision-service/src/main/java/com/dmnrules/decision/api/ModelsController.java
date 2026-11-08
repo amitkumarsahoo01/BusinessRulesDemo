@@ -5,6 +5,7 @@ import com.dmnrules.decision.audit.RuleChangeAuditRow;
 import com.dmnrules.decision.author.CreateTestCaseRequest;
 import com.dmnrules.decision.author.DecisionDiffEntry;
 import com.dmnrules.decision.author.DecisionSummaryDto;
+import com.dmnrules.decision.author.DataTypeImportService;
 import com.dmnrules.decision.author.DecisionTableDto;
 import com.dmnrules.decision.author.DmnImportService;
 import com.dmnrules.decision.author.DmnValidationService;
@@ -50,11 +51,14 @@ public class ModelsController {
     private final DmnXmlEditor xmlEditor;
     private final DmnValidationService validationService;
     private final DmnImportService importService;
+    private final DataTypeImportService dataTypeImportService;
 
     public ModelsController(
             ModelVersionRepository versionRepository, RuleChangeAuditRepository auditRepository,
             TestCaseRepository testCaseRepository, ModelLifecycleService lifecycleService, DmnXmlEditor xmlEditor,
-            DmnValidationService validationService, DmnImportService importService) {
+            DmnValidationService validationService, DmnImportService importService,
+            DataTypeImportService dataTypeImportService) {
+        this.dataTypeImportService = dataTypeImportService;
         this.versionRepository = versionRepository;
         this.auditRepository = auditRepository;
         this.testCaseRepository = testCaseRepository;
@@ -145,6 +149,18 @@ public class ModelsController {
             xml = xml.substring(1);
         }
         return importService.importModel(xml, modelKey, file.getOriginalFilename(), actor);
+    }
+
+    /**
+     * Converts a JSON Schema to DMN data types. With {@code apply: false} it only previews (types,
+     * name conflicts, warnings); with {@code apply: true} it writes them into the draft (never into
+     * a published version). Read-only roles are refused by the auth filter like every other POST here.
+     */
+    @PostMapping("/{modelKey}/data-types/import")
+    public DataTypeImportService.ImportResult importDataTypes(
+            @PathVariable String modelKey, @RequestBody DataTypeImportService.ImportRequest request,
+            @RequestHeader(value = "X-User", defaultValue = "anonymous") String actor) {
+        return dataTypeImportService.importSchema(modelKey, request, actor);
     }
 
     @GetMapping("/{modelKey}/drafts/{id}/analysis")

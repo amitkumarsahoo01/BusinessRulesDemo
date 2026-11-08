@@ -4,8 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ModelsApiService } from '../../core/api/models-api.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { ModelSummary, ModelVersion, ValidationMessage } from '../../core/models/rules.models';
+import { DataTypeImportResult, ModelSummary, ModelVersion, ValidationMessage } from '../../core/models/rules.models';
 import { DmnDiagramEditor } from '../../shared/dmn-editor/dmn-diagram-editor';
+import { SchemaImportPanel } from './schema-import-panel';
 
 /** Value of the model picker that starts a blank model instead of opening an existing one. */
 export const NEW_MODEL = '__new__';
@@ -20,7 +21,7 @@ const MODEL_KEY = /^[a-z0-9][a-z0-9-]{1,62}$/;
  */
 @Component({
   selector: 'app-dmn-editor-page',
-  imports: [FormsModule, RouterLink, DmnDiagramEditor],
+  imports: [FormsModule, RouterLink, DmnDiagramEditor, SchemaImportPanel],
   templateUrl: './dmn-editor-page.html',
   styleUrl: './dmn-editor-page.scss',
 })
@@ -47,6 +48,7 @@ export class DmnEditorPage implements OnInit {
   readonly error = signal<string | null>(null);
   readonly notice = signal<string | null>(null);
   readonly validation = signal<ValidationMessage[] | null>(null);
+  readonly showSchemaImport = signal(false);
 
   changeNote = '';
   newModelKey = '';
@@ -81,6 +83,7 @@ export class DmnEditorPage implements OnInit {
     this.notice.set(null);
     this.error.set(null);
     this.dirty.set(false);
+    this.showSchemaImport.set(false);
     this.changeNote = '';
     void this.router.navigate([], { relativeTo: this.route, queryParams: { model: key }, replaceUrl: true });
     if (key === NEW_MODEL) {
@@ -240,6 +243,31 @@ export class DmnEditorPage implements OnInit {
     link.download = this.fileName();
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  /** Import replaces the editor content with the saved draft, so it waits until edits are saved. */
+  canImportSchema(): boolean {
+    return !this.readOnly() && !this.isNew() && !!this.version() && !this.dirty() && !this.saving();
+  }
+
+  onSchemaImported(result: DataTypeImportResult): void {
+    const saved = result.version;
+    if (!saved) {
+      return;
+    }
+    const wasPublished = !this.isDraft();
+    this.showSchemaImport.set(false);
+    this.version.set(saved);
+    // A new [xml] value makes the open editor load the updated draft in place.
+    this.xml.set(saved.dmnXml);
+    this.validation.set(result.messages);
+    const names = result.types.map((t) => t.name).join(', ');
+    const inputs = result.inputs.length ? ` and ${result.inputs.length} input node(s)` : '';
+    this.notice.set(
+      `Imported ${result.types.length} data type(s) (${names})${inputs} into ${wasPublished ? 'new ' : ''}draft v${saved.version}. ` +
+        'Open the Data types tab to see them.',
+    );
+    this.refreshModels();
   }
 
   undo(): void {

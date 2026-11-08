@@ -1,0 +1,151 @@
+.schema-import {
+  padding: 1rem 1.1rem;
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+.close {
+  border-color: transparent;
+  background: transparent;
+}
+
+.hint {
+  margin: 0.35rem 0 0.9rem;
+  font-size: 0.82rem;
+  color: var(--color-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+label.check {
+  flex-direction: row;
+  align-items: center;
+  font-weight: 500;
+}
+
+textarea,
+input:not([type='checkbox']):not([type='file']) {
+  font: inherit;
+  font-weight: 400;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  resize: vertical;
+}
+
+.file {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.muted {
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
+.small {
+  font-size: 0.8rem;
+}
+
+.notice {
+  margin: 0.75rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  background: var(--color-warn-bg);
+  color: var(--color-warn);
+  &.bad {
+    background: #fef2f2;
+    color: var(--color-danger);
+  }
+}
+
+.preview {
+  margin-top: 0.9rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.6rem;
+}
+
+.types,
+.types ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.82rem;
+}
+
+.types {
+  padding-left: 0;
+  > li {
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  li li {
+    padding: 0.1rem 0;
+  }
+}
+
+.kind {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+}
+
+.allowed {
+  font-size: 0.72rem;
+  margin-left: 0.3rem;
+}
+
+.warnings {
+  margin-top: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--color-warn);
+  ul {
+    margin: 0.3rem 0 0;
+    padding-left: 1.1rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

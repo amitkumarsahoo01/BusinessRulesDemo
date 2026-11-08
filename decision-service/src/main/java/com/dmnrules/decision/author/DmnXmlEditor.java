@@ -217,6 +217,85 @@ public class DmnXmlEditor {
         return write(definitions);
     }
 
+    /** Names of the model's top-level data types. */
+    public List<String> dataTypeNames(String dmnXml) {
+        return parse(dmnXml).getItemDefinition().stream().map(ItemDefinition::getName).toList();
+    }
+
+    /** Names of the model's inputs, decisions, BKMs and knowledge sources. */
+    public List<String> drgElementNames(String dmnXml) {
+        return parse(dmnXml).getDrgElement().stream().map(e -> e.getName()).toList();
+    }
+
+    /**
+     * Adds data types (and optionally input data nodes) to a model; everything else is untouched.
+     * A type whose name already exists is replaced in place when {@code replaceExisting}, otherwise
+     * the call is refused. Inputs whose name is already used by another element are skipped.
+     */
+    public String addDataTypes(String dmnXml, List<ItemDefinitionDto> types, List<JsonSchemaConverter.InputSpec> inputs,
+            boolean replaceExisting) {
+        Definitions definitions = parse(dmnXml);
+        List<ItemDefinition> existing = definitions.getItemDefinition();
+        for (ItemDefinitionDto type : types) {
+            ItemDefinition item = toItemDefinition(type);
+            int index = indexOfName(existing, type.name());
+            if (index < 0) {
+                existing.add(item);
+            } else if (replaceExisting) {
+                item.setId(existing.get(index).getId());
+                existing.set(index, item);
+            } else {
+                throw new IllegalArgumentException("A data type named '" + type.name()
+                        + "' already exists. Choose \"Replace existing types\" or rename the schema type.");
+            }
+        }
+        java.util.Set<String> taken = new java.util.HashSet<>();
+        definitions.getDrgElement().forEach(e -> taken.add(e.getName().toLowerCase(java.util.Locale.ROOT)));
+        for (JsonSchemaConverter.InputSpec input : inputs) {
+            if (!taken.add(input.name().toLowerCase(java.util.Locale.ROOT))) {
+                continue;
+            }
+            org.kie.dmn.model.v1_6.TInputData node = new org.kie.dmn.model.v1_6.TInputData();
+            node.setId("_" + UUID.randomUUID());
+            node.setName(input.name());
+            org.kie.dmn.model.v1_6.TInformationItem variable = new org.kie.dmn.model.v1_6.TInformationItem();
+            variable.setId("_" + UUID.randomUUID());
+            variable.setName(input.name());
+            variable.setTypeRef(new QName(input.typeRef()));
+            node.setVariable(variable);
+            definitions.getDrgElement().add(node);
+        }
+        return write(definitions);
+    }
+
+    private static int indexOfName(List<ItemDefinition> items, String name) {
+        for (int i = 0; i < items.size(); i++) {
+            if (name.equalsIgnoreCase(items.get(i).getName())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private ItemDefinition toItemDefinition(ItemDefinitionDto dto) {
+        org.kie.dmn.model.v1_6.TItemDefinition item = new org.kie.dmn.model.v1_6.TItemDefinition();
+        item.setId("_" + UUID.randomUUID());
+        item.setName(dto.name());
+        item.setIsCollection(dto.collection());
+        if (dto.typeRef() != null) {
+            item.setTypeRef(new QName(dto.typeRef()));
+        }
+        if (dto.allowedValues() != null) {
+            TUnaryTests allowed = new TUnaryTests();
+            allowed.setText(dto.allowedValues());
+            item.setAllowedValues(allowed);
+        }
+        for (ItemDefinitionDto component : dto.components()) {
+            item.getItemComponent().add(toItemDefinition(component));
+        }
+        return item;
+    }
+
     private DecisionTableColumnDto toColumnDto(InputClause input) {
         LiteralExpression expr = input.getInputExpression();
         return new DecisionTableColumnDto(

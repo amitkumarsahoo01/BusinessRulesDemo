@@ -118,6 +118,16 @@ export const API_GROUPS: ApiGroup[] = [
       },
       {
         method: 'POST',
+        path: '/api/models/{modelKey}/data-types/import',
+        summary: 'Add DMN data types from a JSON Schema (preview, or write them into the draft).',
+        access: 'users',
+        details: [
+          'JSON: {"schema": <schema object or text>, "apply": false|true, "rootName", "createInputs", "replaceExisting"}',
+          'apply=false only previews; apply=true updates the draft or branches one from the published version',
+        ],
+      },
+      {
+        method: 'POST',
         path: '/api/models/{modelKey}/drafts',
         summary: 'Create or update the draft: edited decision-table rows, or a whole DMN document.',
         access: 'users',

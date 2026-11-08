@@ -54,6 +54,12 @@ export const ROLE_GUIDES: RoleGuide[] = [
           'The full diagram editor: add inputs, decisions and requirements, edit tables and boxed expressions, or start a new model. Save draft works like the table editor (a published version is never changed), and Create draft model adds a new model as v1.0.0.',
       },
       {
+        title: 'Add data types from a JSON Schema',
+        where: 'DMN Editor → Import JSON Schema',
+        detail:
+          'Paste or upload a schema, click Preview to see the types (and anything DMN cannot express), then import. Objects become structures, arrays lists, enum and minimum/maximum allowed values. The types land in the draft and appear in the Data types tab.',
+      },
+      {
         title: 'Or describe a change in English',
         where: 'Decision tables tab → Describe a rule',
         detail: 'The AI proposes the change as a draft. It never publishes anything.',

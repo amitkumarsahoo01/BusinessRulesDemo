@@ -121,6 +121,51 @@ describe('DmnEditorPage', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Created model "shipping-fees"');
   });
 
+  it('imports a JSON Schema into the draft and reloads the open editor with it', async () => {
+    const fixture = setup({ model: 'loan-eligibility' });
+    httpMock.expectOne('/api/models/loan-eligibility/versions').flush([version({})]);
+    fixture.detectChanges();
+    await settle();
+    const page = fixture.componentInstance;
+    const importButton = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('Import JSON Schema'),
+      ) as HTMLButtonElement;
+
+    // Unsaved diagram edits would be lost on reload, so import waits for a save.
+    fake.edit('<definitions id="unsaved"/>');
+    fixture.detectChanges();
+    expect(importButton().disabled).toBe(true);
+    page.discard();
+    await settle();
+    fixture.detectChanges();
+    expect(importButton().disabled).toBe(false);
+
+    importButton().click();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-schema-import-panel')).not.toBeNull();
+
+    page.onSchemaImported({
+      baseVersion: '1.1.0',
+      types: [{ name: 'Guarantor', typeRef: null, collection: false, allowedValues: null, components: [] }],
+      inputs: ['guarantor'],
+      skippedInputs: [],
+      conflicts: [],
+      warnings: [],
+      applied: true,
+      version: version({ id: 'v-2', version: '1.1.1', status: 'DRAFT', dmnXml: '<definitions id="with-types"/>' }),
+      messages: [],
+    });
+    httpMock.expectOne('/api/models').flush([]);
+    fixture.detectChanges();
+    await settle();
+
+    expect(fake.state.opened.length).toBe(1); // same editor, content swapped in place
+    expect(fake.state.content).toBe('<definitions id="with-types"/>');
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-schema-import-panel')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Imported 1 data type(s) (Guarantor) and 1 input node(s) into new draft v1.1.1');
+  });
+
   it('opens read-only for auditors and offers no save or new model', async () => {
     const fixture = setup({ model: 'loan-eligibility' }, 'auditor');
     httpMock.expectOne('/api/models/loan-eligibility/versions').flush([version({})]);
@@ -132,5 +177,6 @@ describe('DmnEditorPage', () => {
     expect(el.textContent).not.toContain('Save draft');
     expect(el.querySelector('option[value]')?.textContent).not.toContain('New model');
     expect(el.textContent).toContain('read-only access');
+    expect(el.textContent).not.toContain('Import JSON Schema');
   });
 });

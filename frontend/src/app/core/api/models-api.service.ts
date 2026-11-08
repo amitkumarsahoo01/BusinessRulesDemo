@@ -3,6 +3,8 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   CreateTestCaseRequest,
+  DataTypeImportRequest,
+  DataTypeImportResult,
   DecisionDiff,
   DecisionSummary,
   DecisionTable,
@@ -54,6 +56,11 @@ export class ModelsApiService {
       body.append('modelKey', modelKey.trim());
     }
     return this.http.post<ImportResult>('/api/models/import', body);
+  }
+
+  /** Converts a JSON Schema to DMN data types; with apply=false it only previews. */
+  importDataTypes(modelKey: string, request: DataTypeImportRequest): Observable<DataTypeImportResult> {
+    return this.http.post<DataTypeImportResult>(`/api/models/${modelKey}/data-types/import`, request);
   }
 
   history(modelKey: string): Observable<RuleChangeAudit[]> {

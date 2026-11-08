@@ -172,3 +172,26 @@ export interface ImportResult {
   newModel: boolean;
   messages: ValidationMessage[];
 }
+
+export interface DataTypeImportRequest {
+  /** The JSON Schema, as pasted text or a parsed object. */
+  schema: string | object;
+  rootName: string | null;
+  replaceExisting: boolean;
+  createInputs: boolean;
+  /** false = preview only, nothing is written. */
+  apply: boolean;
+  changeNote: string | null;
+}
+
+export interface DataTypeImportResult {
+  baseVersion: string;
+  types: ItemDefinition[];
+  inputs: string[];
+  skippedInputs: string[];
+  conflicts: string[];
+  warnings: string[];
+  applied: boolean;
+  version: ModelVersion | null;
+  messages: ValidationMessage[];
+}
