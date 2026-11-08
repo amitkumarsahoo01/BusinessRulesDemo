@@ -141,8 +141,8 @@ echo "==> ai-service"
 # and set it back to 0 afterwards.
 gcloud run deploy ai-service --image "${REGISTRY}/ai-service:${TAG}" "${COMMON[@]}" \
   --cpu 2 --memory 4Gi --cpu-boost --min-instances 0 --port 8081 --timeout 300 \
-  --set-env-vars "SPRING_DATASOURCE_URL=${JDBC},SPRING_DATASOURCE_USERNAME=${DB_USER},RESET_DEMO_ON_START=false,${POOL},DECISION_SERVICE_URL=${DECISION_URL},AI_PROVIDER=anthropic,AI_MODEL=${AI_MODEL}" \
-  --set-secrets "SPRING_DATASOURCE_PASSWORD=dmn-db-password:latest,ANTHROPIC_API_KEY=dmn-anthropic-key:latest,AI_SERVICE_PASSWORD=dmn-ai-service-password:latest"
+  --set-env-vars "SPRING_DATASOURCE_URL=${JDBC},SPRING_DATASOURCE_USERNAME=${DB_USER},RESET_DEMO_ON_START=false,${POOL},DECISION_SERVICE_URL=${DECISION_URL},AI_PROVIDER=anthropic,AI_MODEL=${AI_MODEL},AI_MONTHLY_BUDGET_USD=${AI_MONTHLY_BUDGET_USD}" \
+  --set-secrets "${AI_SECRETS}"
 AI_URL="$(gcloud run services describe ai-service --region "$REGION" --format='value(status.url)')"
 
 echo "==> frontend"
