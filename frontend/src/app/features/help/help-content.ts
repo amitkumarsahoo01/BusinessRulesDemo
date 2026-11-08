@@ -48,6 +48,12 @@ export const ROLE_GUIDES: RoleGuide[] = [
           'Change cells, add or remove rows, or change the hit policy, then click Save draft. Published versions are never changed: saving creates or updates a draft.',
       },
       {
+        title: 'Draw or restructure the model',
+        where: 'DMN Editor',
+        detail:
+          'The full diagram editor: add inputs, decisions and requirements, edit tables and boxed expressions, or start a new model. Save draft works like the table editor (a published version is never changed), and Create draft model adds a new model as v1.0.0.',
+      },
+      {
         title: 'Or describe a change in English',
         where: 'Decision tables tab → Describe a rule',
         detail: 'The AI proposes the change as a draft. It never publishes anything.',
@@ -153,7 +159,7 @@ export const ROLE_GUIDES: RoleGuide[] = [
   {
     role: 'admin',
     label: 'Administrator',
-    summary: 'You choose which language model powers Ask Bob. You do not author or approve rules.',
+    summary: 'You choose which language model powers Ask Bob and keep its cost within budget. You do not author or approve rules.',
     steps: [
       {
         title: 'Check what is active',
@@ -164,7 +170,7 @@ export const ROLE_GUIDES: RoleGuide[] = [
         title: 'Pick a provider and model',
         where: 'Admin → LLM provider',
         detail:
-          'Choose Anthropic, OpenAI (or an OpenAI-compatible gateway) or a self-hosted Ollama, then pick a model. Providers whose API key is not set on the server cannot be chosen.',
+          'Choose Anthropic, OpenAI (or an OpenAI-compatible gateway), Google Gemini or a self-hosted Ollama, then pick a model. Providers whose API key is not set on the server cannot be chosen.',
       },
       {
         title: 'Test before you switch',
@@ -175,6 +181,12 @@ export const ROLE_GUIDES: RoleGuide[] = [
         title: 'Save and apply',
         where: 'Admin → Save and apply',
         detail: 'Takes effect right away for new questions, with no restart. Every change is recorded in Change history.',
+      },
+      {
+        title: 'Watch the spend and set a budget',
+        where: 'Admin → LLM spend & budget',
+        detail:
+          'Shows what every model has cost this month (all providers combined) against a monthly budget. When the budget is used up, Ask Bob stops calling paid providers until the 1st; Ollama keeps working. Keep the price table in line with each provider pricing page.',
       },
     ],
     limits: [

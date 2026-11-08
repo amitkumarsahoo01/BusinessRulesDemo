@@ -120,7 +120,8 @@ public class LlmRouter {
         }
         if (provider.requiresApiKey() && !factory.isKeyConfigured(provider)) {
             throw new InvalidLlmSettingsException("The API key for " + provider.label()
-                    + " is not configured on the server. Set it as an environment variable and restart ai-service.");
+                    + " is not configured on the server. Set " + LlmClientFactory.apiKeyEnvVar(provider)
+                    + " and restart ai-service.");
         }
         String normalizedUrl = null;
         if (baseUrl != null && !baseUrl.isBlank()) {

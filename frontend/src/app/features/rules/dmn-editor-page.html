@@ -1,0 +1,118 @@
+<section class="page dmn-editor-page">
+  <header class="page-head">
+    <div>
+      <h1>DMN editor</h1>
+      <p class="subtitle">
+        Draw decisions, inputs and requirements, and edit decision tables and boxed expressions in the full Apache KIE editor.
+        Saving creates or updates a draft; nothing goes live until it is validated, tested, approved and published.
+      </p>
+    </div>
+  </header>
+
+  <div class="toolbar card">
+    <label class="picker">
+      <span>Model</span>
+      <select
+        name="model"
+        [ngModel]="selectedKey()"
+        (ngModelChange)="select($event)"
+        [disabled]="dirty() || saving()"
+        aria-label="Model to edit"
+      >
+        <option [ngValue]="null" disabled>Choose a model…</option>
+        @for (m of models(); track m.modelKey) {
+          <option [ngValue]="m.modelKey">{{ m.name }} ({{ m.modelKey }})</option>
+        }
+        @if (!readOnly()) {
+          <option [ngValue]="newModel">+ New model…</option>
+        }
+      </select>
+    </label>
+
+    @if (isNew()) {
+      <label class="picker">
+        <span>Model key</span>
+        <input name="newKey" [(ngModel)]="newModelKey" placeholder="e.g. shipping-fees" autocomplete="off" />
+      </label>
+    } @else if (version(); as v) {
+      <div class="version">
+        <span class="status-pill" [class]="v.status.toLowerCase()">{{ v.status }}</span>
+        <span>v{{ v.version }}</span>
+        @if (!isDraft() && !readOnly()) {
+          <span class="muted">· saving creates a new draft</span>
+        }
+        <a [routerLink]="['/rules', v.modelKey]" class="model-link">Open model page →</a>
+      </div>
+    }
+
+    <span class="spacer"></span>
+
+    @if (xml() !== null) {
+      <div class="actions">
+        <button type="button" class="btn ghost" (click)="undo()" [disabled]="readOnly()" title="Undo">↶</button>
+        <button type="button" class="btn ghost" (click)="redo()" [disabled]="readOnly()" title="Redo">↷</button>
+        <button type="button" class="btn" (click)="download()">Download .dmn</button>
+        @if (!readOnly()) {
+          @if (isDraft() && !isNew()) {
+            <button type="button" class="btn" (click)="validate()" [disabled]="validating() || dirty()"
+              [title]="dirty() ? 'Save first, then validate the saved draft' : 'Validate the saved draft'">
+              {{ validating() ? 'Validating…' : 'Validate' }}
+            </button>
+          }
+          @if (dirty()) {
+            <button type="button" class="btn ghost" (click)="discard()">Discard</button>
+          }
+          <button type="button" class="btn primary" (click)="save()" [disabled]="saving() || (!dirty() && !isNew())">
+            {{ saving() ? 'Saving…' : isNew() ? 'Create draft model' : 'Save draft' }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  @if (xml() !== null && !readOnly()) {
+    <div class="note-row">
+      <input name="changeNote" [(ngModel)]="changeNote" placeholder="Change note (optional), e.g. Added a VIP discount rule"
+        aria-label="Change note" />
+      @if (dirty()) {
+        <span class="dirty" role="status">● Unsaved changes</span>
+      }
+    </div>
+  }
+
+  @if (readOnly()) {
+    <p class="notice">You have read-only access: you can explore and download models but not save changes.</p>
+  }
+  @if (error()) {
+    <p class="notice bad" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="notice ok" role="status">✓ {{ notice() }}</p>
+  }
+  @if (validation(); as msgs) {
+    <div class="notice" [class.bad]="hasErrors(msgs)" [class.ok]="!hasErrors(msgs)">
+      @if (msgs.length === 0) {
+        ✓ Valid: no problems found.
+      } @else {
+        <strong>{{ hasErrors(msgs) ? 'Validation found problems' : 'Valid, with notes' }}</strong>
+        <ul>
+          @for (m of msgs; track $index) {
+            <li><span class="sev">{{ m.severity }}</span> {{ m.message }}</li>
+          }
+        </ul>
+      }
+    </div>
+  }
+
+  <div class="canvas card">
+    @if (xml() !== null) {
+      <app-dmn-diagram-editor [xml]="xml() ?? ''" [fileName]="fileName()" [readOnly]="readOnly()" (dirtyChange)="onDirty($event)" />
+    } @else if (loading()) {
+      <p class="empty">Loading model…</p>
+    } @else {
+      <div class="empty">
+        <p>{{ readOnly() ? 'Choose a model to open it in the diagram editor.' : 'Choose a model to open it in the diagram editor, or start a new one.' }}</p>
+      </div>
+    }
+  </div>
+</section>

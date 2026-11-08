@@ -23,7 +23,7 @@ class LlmRouterTest {
     private final LlmSettingsRepository repository = mock(LlmSettingsRepository.class);
 
     private LlmRouter router(String anthropicKey, String openAiKey) {
-        return new LlmRouter(new LlmClientFactory(anthropicKey, openAiKey, "http://ollama:11434"), repository,
+        return new LlmRouter(LlmClientFactory.unmetered(anthropicKey, openAiKey, "", "http://ollama:11434"), repository,
                 "anthropic", "", Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -97,6 +97,22 @@ class LlmRouterTest {
                 .hasMessageContaining("does not take a custom base URL");
         assertThat(router.validate(LlmProvider.OPENAI, "gpt-4o", "https://my-gateway.example.com/").baseUrl())
                 .isEqualTo("https://my-gateway.example.com");
+    }
+
+    @Test
+    void geminiNeedsItsOwnKeyAndTakesNoBaseUrl() {
+        when(repository.load()).thenReturn(Optional.empty());
+        LlmRouter withoutKey = router("key", "key");
+        assertThatThrownBy(() -> withoutKey.validate(LlmProvider.GEMINI, "gemini-2.5-flash", null))
+                .isInstanceOf(InvalidLlmSettingsException.class)
+                .hasMessageContaining("GEMINI_API_KEY");
+
+        LlmRouter withKey = new LlmRouter(LlmClientFactory.unmetered("key", "", "gemini-key", "http://ollama:11434"),
+                repository, "anthropic", "", Clock.fixed(NOW, ZoneOffset.UTC));
+        withKey.update(LlmProvider.GEMINI, "gemini-2.5-flash", null, "admin");
+        assertThat(withKey.current().provider()).isEqualTo(LlmProvider.GEMINI);
+        assertThatThrownBy(() -> withKey.validate(LlmProvider.GEMINI, "gemini-2.5-pro", "https://proxy.example.com"))
+                .hasMessageContaining("does not take a custom base URL");
     }
 
     @Test

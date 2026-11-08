@@ -59,9 +59,17 @@ rules-ai:
     # Keys only ever come from env vars (CLAUDE.md rule 8). Anthropic's is spring.ai.anthropic.api-key above.
     openai:
       api-key: ${OPENAI_API_KEY:}
+    gemini:
+      # Google AI Studio key; used against Gemini's OpenAI-compatible endpoint.
+      api-key: ${GEMINI_API_KEY:}
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
   max-tool-calls: 8
+  # Starting monthly LLM budget (USD, all providers combined, calendar month UTC). Once an admin
+  # saves a budget in the console, the stored one wins. Chat stops when the month's spend reaches it.
+  budget:
+    monthly-usd: ${AI_MONTHLY_BUDGET_USD:25}
+    warn-percent: ${AI_BUDGET_WARN_PERCENT:80}
 
 demo:
   seed:

@@ -1,0 +1,154 @@
+.dmn-editor-page {
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.page-head h1 {
+  margin: 0;
+}
+
+.subtitle {
+  margin: 0.3rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  max-width: 70rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  select,
+  input {
+    min-width: 16rem;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 400;
+    color: var(--color-text);
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+  }
+}
+
+.version {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.84rem;
+  padding-bottom: 0.4rem;
+}
+
+.model-link {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.btn.ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.note-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  input {
+    flex: 1;
+    max-width: 40rem;
+    font: inherit;
+    font-size: 0.84rem;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+}
+
+.dirty {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-warn);
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+.notice {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  background: var(--color-warn-bg);
+  color: var(--color-warn);
+  ul {
+    margin: 0.4rem 0 0;
+    padding-left: 1.1rem;
+  }
+  &.ok {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+  }
+  &.bad {
+    background: #fef2f2;
+    color: var(--color-danger);
+  }
+}
+
+.sev {
+  font-size: 0.68rem;
+  font-weight: 700;
+  margin-right: 0.3rem;
+}
+
+.canvas {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  height: calc(100vh - 270px);
+  min-height: 560px;
+}
+
+.canvas .empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
+  color: var(--color-muted);
+}
+
+@media (max-width: 700px) {
+  .picker select,
+  .picker input {
+    min-width: 0;
+    width: 100%;
+  }
+  .picker {
+    flex: 1 1 100%;
+  }
+}

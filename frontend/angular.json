@@ -27,6 +27,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "index.js",
+                "input": "node_modules/@kie-tools/dmn-editor-standalone/dist",
+                "output": "vendor/kie-dmn-editor/10.2.0"
               }
             ],
             "styles": [

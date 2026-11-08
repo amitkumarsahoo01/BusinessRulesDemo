@@ -3,6 +3,8 @@
 #
 #   Required env:  GCP_PROJECT (must have billing enabled)
 #   Optional env:  ANTHROPIC_API_KEY (only read the first time, to create the secret)
+#   Optional env:  GEMINI_API_KEY (only read the first time; if never given, Gemini stays unavailable)
+#   Optional env:  AI_MONTHLY_BUDGET_USD (25) -- starting LLM budget; the admin console can change it
 #   Optional env:  REGION (us-central1), SQL_TIER (db-f1-micro), AI_MODEL
 #
 # Topology: three Cloud Run services (decision-service, ai-service, frontend/nginx) + Cloud SQL
@@ -15,6 +17,7 @@ set -euo pipefail
 REGION="${REGION:-us-central1}"
 SQL_TIER="${SQL_TIER:-db-f1-micro}"
 AI_MODEL="${AI_MODEL:-claude-sonnet-4-5-20250929}"
+AI_MONTHLY_BUDGET_USD="${AI_MONTHLY_BUDGET_USD:-25}"
 REPO="dmn-rules"
 SQL_INSTANCE="dmn-rules-db"
 DB_NAME="dmn_rules"
@@ -65,6 +68,17 @@ if ! secret_exists dmn-anthropic-key; then
   [ -n "${ANTHROPIC_API_KEY:-}" ] || echo "WARNING: ANTHROPIC_API_KEY not set; storing a placeholder (Ask AI will not answer)"
   printf '%s' "${ANTHROPIC_API_KEY:-unset}" | gcloud secrets create dmn-anthropic-key --data-file=-
 fi
+# Gemini is opt-in: the secret is only created when a key is supplied, and only mounted if it exists,
+# so the admin console correctly shows Gemini as "key not set" otherwise.
+if ! secret_exists dmn-gemini-key && [ -n "${GEMINI_API_KEY:-}" ]; then
+  printf '%s' "$GEMINI_API_KEY" | gcloud secrets create dmn-gemini-key --data-file=-
+fi
+AI_SECRETS="SPRING_DATASOURCE_PASSWORD=dmn-db-password:latest,ANTHROPIC_API_KEY=dmn-anthropic-key:latest,AI_SERVICE_PASSWORD=dmn-ai-service-password:latest"
+RUNTIME_SECRETS=(dmn-db-password dmn-anthropic-key dmn-admin-password dmn-auth-token-secret dmn-api-client-password dmn-ai-service-password)
+if secret_exists dmn-gemini-key; then
+  AI_SECRETS="${AI_SECRETS},GEMINI_API_KEY=dmn-gemini-key:latest"
+  RUNTIME_SECRETS+=(dmn-gemini-key)
+fi
 # Admin console password, session-token signing secret, the 'api-client' integration password (HTTP
 # Basic) and ai-service's own credential for decision-service. All must be fixed values here: Cloud Run
 # scales services to zero, and per-start random values would change passwords and sign everyone out
@@ -78,7 +92,7 @@ done
 # Cloud Run's default compute service account reads the secrets at startup.
 PROJECT_NUMBER="$(gcloud projects describe "$GCP_PROJECT" --format='value(projectNumber)')"
 RUN_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-for s in dmn-db-password dmn-anthropic-key dmn-admin-password dmn-auth-token-secret dmn-api-client-password dmn-ai-service-password; do
+for s in "${RUNTIME_SECRETS[@]}"; do
   gcloud secrets add-iam-policy-binding "$s" --member "serviceAccount:${RUN_SA}" \
     --role roles/secretmanager.secretAccessor >/dev/null
 done

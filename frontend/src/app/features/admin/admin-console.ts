@@ -6,11 +6,12 @@ import { Router } from '@angular/router';
 import { AdminApiService } from '../../core/api/admin-api.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { LlmAdminView, LlmSettingsRequest, LlmTestResult, ProviderOption } from '../../core/models/admin.models';
+import { LlmBudgetPanel } from './llm-budget-panel';
 
-/** Admin-only: choose which LLM answers Ask AI / Ask Bob. Keys stay in server env vars. */
+/** Admin-only: choose which LLM answers Ask AI / Ask Bob, and watch what it costs. Keys stay in server env vars. */
 @Component({
   selector: 'app-admin-console',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, LlmBudgetPanel],
   templateUrl: './admin-console.html',
   styleUrl: './admin-console.scss',
 })

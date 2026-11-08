@@ -17,6 +17,10 @@ server {
     client_max_body_size 2m;
     root /usr/share/nginx/html;
     index index.html;
+    # nginx only gzips text/html by default; the app bundles and the DMN editor compress ~4x.
+    gzip on;
+    gzip_types application/javascript text/javascript text/css application/json image/svg+xml;
+    gzip_min_length 1024;
 
     location /api/ai/ {
         # Protects the AI endpoint (and the API key it spends) on a public demo: 10 requests/
@@ -44,6 +48,12 @@ server {
     # immutable and can be cached forever.
     location = /index.html {
         add_header Cache-Control "no-cache" always;
+    }
+
+    # The embedded KIE DMN editor (~11 MB, ~3.4 MB gzipped) is served from a versioned path
+    # (vendor/kie-dmn-editor/<version>/), so it can be cached forever like the hashed bundles.
+    location ^~ /vendor/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
     }
 
     location ~* "-[A-Za-z0-9_-]{8,}\.(js|css)$" {

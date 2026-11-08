@@ -31,6 +31,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/rules/rule-editor-page').then((m) => m.RuleEditorPage),
   },
   {
+    path: 'dmn-editor',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/rules/dmn-editor-page').then((m) => m.DmnEditorPage),
+  },
+  {
     path: 'ask-ai',
     canActivate: [authGuard],
     loadComponent: () => import('./features/chat/chat-page').then((m) => m.ChatPage),

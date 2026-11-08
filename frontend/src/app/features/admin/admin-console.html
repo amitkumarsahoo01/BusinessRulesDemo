@@ -84,7 +84,7 @@
             @if (sel.requiresApiKey && !sel.apiKeyConfigured) {
               <p class="notice warn">
                 This provider needs an API key, which is only read from the server environment
-                (<code>{{ sel.id === 'openai' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY' }}</code>), never stored in the database.
+                (<code>{{ sel.apiKeyEnvVar }}</code>), never stored in the database.
                 Set it and restart ai-service to enable this provider.
               </p>
             }
@@ -141,5 +141,6 @@
         </p>
       </aside>
     </div>
+    <app-llm-budget-panel />
   }
 </section>

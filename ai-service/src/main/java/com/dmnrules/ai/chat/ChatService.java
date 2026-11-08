@@ -1,6 +1,7 @@
 package com.dmnrules.ai.chat;
 
 import com.dmnrules.ai.llm.LlmRouter;
+import com.dmnrules.ai.llm.cost.LlmBudgetService;
 import com.dmnrules.ai.retrieval.DocumentRetrievalTools;
 import com.dmnrules.ai.tools.RuleTools;
 import com.dmnrules.ai.tools.ToolCallLog;
@@ -12,6 +13,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -49,10 +51,13 @@ public class ChatService {
     private final DocumentRetrievalTools documentRetrievalTools;
     private final ConversationRepository conversationRepository;
     private final InteractionAuditRepository auditRepository;
+    private final LlmBudgetService budget;
 
     public ChatService(
             LlmRouter llmRouter, RuleTools ruleTools, DocumentRetrievalTools documentRetrievalTools,
-            ConversationRepository conversationRepository, InteractionAuditRepository auditRepository) {
+            ConversationRepository conversationRepository, InteractionAuditRepository auditRepository,
+            LlmBudgetService budget) {
+        this.budget = budget;
         this.llmRouter = llmRouter;
         this.ruleTools = ruleTools;
         this.documentRetrievalTools = documentRetrievalTools;
@@ -84,6 +89,13 @@ public class ChatService {
                 .toList();
 
         auditRepository.record(conversationId, "USER", userContent, null, null);
+
+        // Budget gate: checked before any provider call, so nothing is spent once the month's limit is hit.
+        Optional<String> blocked = budget.blockReason(llmRouter.current().provider());
+        if (blocked.isPresent()) {
+            auditRepository.record(conversationId, "ASSISTANT", blocked.get(), null, null);
+            return Flux.just(blocked.get());
+        }
 
         List<ToolCallLog.Entry> toolLog = new CopyOnWriteArrayList<>();
         StringBuilder fullResponse = new StringBuilder();

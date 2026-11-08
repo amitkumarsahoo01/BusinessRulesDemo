@@ -68,6 +68,7 @@ class AdminLlmControllerTest {
         registry.add("rules-ai.decision-service-base-url", AdminLlmControllerTest::decisionServiceUrl);
         registry.add("spring.ai.anthropic.api-key", () -> "placeholder-not-a-real-key-unused-in-this-test");
         registry.add("rules-ai.providers.openai.api-key", () -> "");
+        registry.add("rules-ai.providers.gemini.api-key", () -> "");
     }
 
     @BeforeAll
@@ -109,7 +110,7 @@ class AdminLlmControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat((Map<String, Object>) response.getBody().get("current")).containsKey("provider");
         List<Map<String, Object>> providers = (List<Map<String, Object>>) response.getBody().get("providers");
-        assertThat(providers).extracting(p -> p.get("id")).containsExactly("anthropic", "openai", "ollama");
+        assertThat(providers).extracting(p -> p.get("id")).containsExactly("anthropic", "openai", "gemini", "ollama");
         assertThat(providers).filteredOn(p -> p.get("id").equals("openai"))
                 .singleElement().satisfies(p -> assertThat(p.get("apiKeyConfigured")).isEqualTo(false));
         assertThat(response.getBody().toString()).doesNotContain("placeholder-not-a-real-key");

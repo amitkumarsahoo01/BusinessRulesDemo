@@ -12,6 +12,10 @@ public enum LlmProvider {
             List.of("claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5", "claude-sonnet-4-5-20250929")),
     OPENAI("openai", "OpenAI (or compatible)", true, true, "gpt-4.1-mini",
             List.of("gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini")),
+    // Reached through Google's OpenAI-compatible endpoint, so tool calling and streaming reuse the
+    // OpenAI client. The endpoint is fixed; keys come from GEMINI_API_KEY (Google AI Studio).
+    GEMINI("gemini", "Google Gemini", true, false, "gemini-2.5-flash",
+            List.of("gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite")),
     OLLAMA("ollama", "Ollama (self-hosted)", false, true, "llama3.1",
             List.of("llama3.1", "qwen2.5", "mistral-nemo"));
 

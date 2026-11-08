@@ -38,7 +38,8 @@ public class AdminLlmController {
     }
 
     public record ProviderOption(String id, String label, boolean apiKeyConfigured, boolean requiresApiKey,
-            boolean supportsBaseUrl, String defaultBaseUrl, String defaultModel, List<String> suggestedModels) {
+            String apiKeyEnvVar, boolean supportsBaseUrl, String defaultBaseUrl, String defaultModel,
+            List<String> suggestedModels) {
     }
 
     public record CurrentSettings(String provider, String model, String baseUrl, String updatedBy, Instant updatedAt) {
@@ -78,7 +79,7 @@ public class AdminLlmController {
         LlmClientFactory factory = router.factory();
         List<ProviderOption> providers = Arrays.stream(LlmProvider.values())
                 .map(p -> new ProviderOption(p.id(), p.label(), factory.isKeyConfigured(p), p.requiresApiKey(),
-                        p.supportsBaseUrl(), factory.defaultBaseUrl(p), p.defaultModel(), p.suggestedModels()))
+                        LlmClientFactory.apiKeyEnvVar(p), p.supportsBaseUrl(), factory.defaultBaseUrl(p), p.defaultModel(), p.suggestedModels()))
                 .toList();
         return new LlmAdminView(
                 new CurrentSettings(s.provider().id(), s.model(), s.baseUrl(), s.updatedBy(), s.updatedAt()),

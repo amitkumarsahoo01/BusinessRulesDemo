@@ -1,0 +1,162 @@
+<article class="card budget">
+  <header class="b-head">
+    <div>
+      <h2>LLM spend &amp; budget</h2>
+      <p class="hint">
+        One monthly budget across Anthropic, OpenAI and Gemini (calendar month, UTC). Every model call is priced and recorded,
+        including each tool-calling round. Self-hosted Ollama costs nothing and is never blocked.
+      </p>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="notice bad" role="alert">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="notice ok" role="status">✓ {{ message() }}</p>
+  }
+
+  @if (status(); as s) {
+    <section class="meter" [class.warn]="s.state === 'WARNING'" [class.over]="s.state === 'EXCEEDED'">
+      <div class="meter-top">
+        <span class="spent">${{ s.spentUsd | number: '1.2-4' }}</span>
+        <span class="of">of ${{ s.settings.monthlyLimitUsd | number: '1.2-2' }} in {{ s.month }}</span>
+        <span class="spacer"></span>
+        <span class="state" data-testid="budget-state">
+          @switch (s.state) {
+            @case ('EXCEEDED') { {{ s.settings.hardStop ? 'Budget used up, chat paused' : 'Over budget (warn only)' }} }
+            @case ('WARNING') { Above {{ s.settings.warnPercent }}% }
+            @default { Within budget }
+          }
+        </span>
+      </div>
+      <div class="bar" role="progressbar" [attr.aria-valuenow]="s.percentUsed" aria-valuemin="0" aria-valuemax="100"
+        aria-label="Share of monthly budget used">
+        <div class="fill" [style.width.%]="barPercent()"></div>
+        <div class="tick" [style.left.%]="s.settings.warnPercent"></div>
+      </div>
+      <div class="meter-foot">
+        {{ s.percentUsed | number: '1.0-1' }}% used · ${{ s.remainingUsd | number: '1.2-2' }} left
+      </div>
+      @if (s.daily.length) {
+        <div class="spark" aria-label="Daily spend this month">
+          @for (d of s.daily; track d.day) {
+            <span class="day" [style.height.%]="(d.costUsd / maxDaily()) * 100"
+              [attr.title]="d.day + ': $' + (d.costUsd | number: '1.2-4')"></span>
+          }
+        </div>
+      }
+    </section>
+
+    <form class="limits" (ngSubmit)="saveBudget()">
+      <label>
+        Monthly budget (USD)
+        <input name="limit" type="number" min="0" step="1" [(ngModel)]="limit" required />
+      </label>
+      <label>
+        Warn at (%)
+        <input name="warn" type="number" min="1" max="100" [(ngModel)]="warnPercent" required />
+      </label>
+      <label class="check">
+        <input name="hardStop" type="checkbox" [(ngModel)]="hardStop" />
+        Stop paid chat when the budget is used up
+      </label>
+      <button type="submit" class="btn primary" [disabled]="busy() || !budgetDirty()">Save budget</button>
+    </form>
+    <p class="field-hint">
+      The check runs before each message, so the message that crosses the line still completes (each call is capped at
+      4,096 output tokens). Also set a spend limit in each provider's own console as a second safeguard.
+      @if (s.settings.updatedBy) { Last changed by {{ s.settings.updatedBy }} {{ s.settings.updatedAt | date: 'medium' }}. }
+      @else { Starting values come from AI_MONTHLY_BUDGET_USD / AI_BUDGET_WARN_PERCENT. }
+    </p>
+
+    <h3>This month by model</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Provider</th><th>Model</th><th class="num">Calls</th><th class="num">Input tok</th><th class="num">Output tok</th><th class="num">Cost</th></tr>
+        </thead>
+        <tbody>
+          @for (m of s.byModel; track m.provider + m.model) {
+            <tr>
+              <td>{{ m.provider }}</td>
+              <td>
+                <code>{{ m.model }}</code>
+                @if (m.estimatedCalls) { <span class="flag" title="The provider returned no token counts for some calls; estimated from text length">~est</span> }
+                @if (m.fallbackPricedCalls) { <span class="flag warn" title="No price row matched; charged at this provider's highest listed rate">no price</span> }
+              </td>
+              <td class="num">{{ m.calls | number }}</td>
+              <td class="num">{{ m.inputTokens | number }}</td>
+              <td class="num">{{ m.outputTokens | number }}</td>
+              <td class="num">${{ m.costUsd | number: '1.2-4' }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="muted">No LLM calls this month yet.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="prices-head">
+      <h3>Prices (USD per million tokens)</h3>
+      <button type="button" class="btn" (click)="addPrice()" [disabled]="editing() !== null">Add model</button>
+    </div>
+    <p class="field-hint">
+      A model uses the longest matching name prefix (<code>gpt-4.1-mini</code> before <code>gpt-4.1</code>). Unlisted models are
+      charged at the provider's highest rate, so the budget errs on the safe side. Check these against each provider's pricing page.
+    </p>
+    <div class="table-wrap">
+      <table class="prices">
+        <thead>
+          <tr><th>Provider</th><th>Model prefix</th><th class="num">Input</th><th class="num">Output</th><th></th></tr>
+        </thead>
+        <tbody>
+          @if (editing() === 'new') {
+            <ng-container *ngTemplateOutlet="editRow"></ng-container>
+          }
+          @for (p of s.prices; track key(p)) {
+            @if (editing() === key(p)) {
+              <ng-container *ngTemplateOutlet="editRow"></ng-container>
+            } @else {
+              <tr>
+                <td>{{ p.provider }}</td>
+                <td><code>{{ p.modelPrefix }}</code></td>
+                <td class="num">${{ p.inputPerMtok | number: '1.2-4' }}</td>
+                <td class="num">${{ p.outputPerMtok | number: '1.2-4' }}</td>
+                <td class="row-actions">
+                  <button type="button" class="link" (click)="editPrice(p)" [disabled]="editing() !== null">Edit</button>
+                  <button type="button" class="link danger" (click)="deletePrice(p)" [disabled]="editing() !== null || busy()">Remove</button>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (!error()) {
+    <div class="skeleton"></div>
+  }
+</article>
+
+<ng-template #editRow>
+  <tr class="editing">
+    <td>
+      @if (editing() === 'new') {
+        <select name="p-provider" [(ngModel)]="draft.provider" aria-label="Provider">
+          @for (id of providers; track id) { <option [value]="id">{{ id }}</option> }
+        </select>
+      } @else { {{ draft.provider }} }
+    </td>
+    <td>
+      @if (editing() === 'new') {
+        <input name="p-prefix" [(ngModel)]="draft.modelPrefix" placeholder="e.g. gemini-3-flash" aria-label="Model prefix" />
+      } @else { <code>{{ draft.modelPrefix }}</code> }
+    </td>
+    <td class="num"><input name="p-in" type="number" min="0" step="0.01" [(ngModel)]="draft.inputPerMtok" aria-label="Input price" /></td>
+    <td class="num"><input name="p-out" type="number" min="0" step="0.01" [(ngModel)]="draft.outputPerMtok" aria-label="Output price" /></td>
+    <td class="row-actions">
+      <button type="button" class="link" (click)="savePrice()" [disabled]="busy() || !draft.modelPrefix.trim()">Save</button>
+      <button type="button" class="link" (click)="cancelEdit()">Cancel</button>
+    </td>
+  </tr>
+</ng-template>

@@ -14,6 +14,7 @@
           <span class="status-pill" [class]="currentVersion()!.status.toLowerCase()">{{ currentVersion()!.status }}</span>
           <span class="version-number">v{{ currentVersion()!.version }}</span>
           <span class="authored-by">by {{ currentVersion()!.authoredBy }}</span>
+          <a class="btn" [routerLink]="['/dmn-editor']" [queryParams]="{ model: modelKey() }">Open in DMN editor</a>
         </div>
       }
     </header>
